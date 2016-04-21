@@ -524,8 +524,10 @@ int seq;
 
 	seq=++t->last_sent;
 	debug("Sending ping #%i to %s (%s)",seq,t->description,t->name);
+#if 0
 	strftime(buf,100,"%b %d %H:%M:%S",localtime(&t->next_probe.tv_sec));
 	debug("Next one scheduled for %s",buf);
+#endif
 	if (t->addr.addr.sa_family==AF_INET) send_icmp_probe(t,seq);
 #ifdef HAVE_IPV6
 	else if (t->addr.addr.sa_family==AF_INET6) send_icmp6_probe(t,seq);
@@ -633,7 +635,7 @@ struct alarm_cfg *a;
 	}
 }
 
-void configure_targets(void){
+void configure_targets(int reload){
 struct target *t,*pt,*nt;
 struct target_cfg *tc;
 struct active_alarm_list *al,*nal;
@@ -737,7 +739,8 @@ int l;
 		else
 			t->queue=NEW(char,l);
 		assert(t->queue!=NULL);
-		memset(t->queue,0,l);
+		if (!reload)
+			memset(t->queue,0,l);
 		/* t->recently_lost=tc->avg_loss_samples; */
 		l=tc->avg_delay_samples;
 		if (t->rbuf)
@@ -745,7 +748,8 @@ int l;
 		else
 			t->rbuf=NEW(double,l);
 		assert(t->rbuf!=NULL);
-		memset(t->rbuf,0,l);
+		if (!reload)
+			memset(t->rbuf,0,l);
 	}
 
 	if (targets==NULL){
@@ -793,7 +797,7 @@ int r;
 			toggle_alarm(t,a,-1);
 		}
 	r=load_config(config_file);
-	if (r==0) configure_targets();
+	if (r==0) configure_targets(1);
 }
 
 void write_status(void){
@@ -877,9 +881,9 @@ char *buf1,*buf2;
 
 void main_loop(void){
 struct target *t;
-struct timeval cur_time,next_status={0,0},tv,next_report={0,0},next_rrd_update={0,0};
+struct timeval cur_time,next_status={0,0},tv,next_report={0,0},next_rrd_update={0,0}, event_time;
 struct pollfd pfd[1024];
-int timeout;
+int timeout, timedelta;
 int npfd=0;
 int i;
 char buf[100];	
@@ -888,7 +892,7 @@ struct alarm_list *al,*nal;
 struct active_alarm_list *aal;
 struct alarm_cfg *a;
 
-	configure_targets();
+	configure_targets(0);
 	memset(&pfd, '\0', sizeof pfd);
 
 	if (config->status_interval){
@@ -919,12 +923,22 @@ struct alarm_cfg *a;
 					timersub(&cur_time,&operation_started,&tv);
 				}
 				downtime=tv.tv_sec*1000+tv.tv_usec/1000;
+				if (timedelta > 0)
+					downtime -= timedelta;
 				if ( downtime > a->p.val)
 					toggle_alarm(t,a,1);
 			}
 			if (scheduled_event(&(t->next_probe),&cur_time,t->config->interval)){
 				send_probe(t);
 			}
+		}
+		gettimeofday(&event_time,NULL);
+		if (reload_request){
+			reload_request=0;
+			logit("SIGHUP received, reloading configuration.");
+			reload_config();
+		}
+		for(t=targets;t;t=t->next){
 			for(aal=t->active_alarms;aal;aal=aal->next){
 				char *msgid;
 				char buf[100];
@@ -949,6 +963,13 @@ struct alarm_cfg *a;
 				status_request=0;
 			}
 		}
+		if (status_request){
+			status_request=0;
+			if (config->status_file){
+				logit("SIGUSR1 received, writting status.");
+				write_status();
+			}
+		}
 		if (config->rrd_interval){
 			if (scheduled_event(&next_rrd_update,&cur_time,config->rrd_interval)){
 				rrd_update();
@@ -969,9 +990,18 @@ struct alarm_cfg *a;
 			if (!timerisset(&next_probe) || timercmp(&next_report,&next_probe,<))
 				next_probe=next_report;
 		}
+
 		strftime(buf,100,"%b %d %H:%M:%S",localtime(&next_probe.tv_sec));
 		debug("Next event scheduled for %s",buf);
+
 		gettimeofday(&cur_time,NULL);
+		if (timercmp(&cur_time,&event_time,<)){
+			timedelta=0;
+		}
+		else{
+			timersub(&cur_time,&event_time,&tv);
+			timedelta=tv.tv_usec/1000+tv.tv_sec*1000;
+		}
 		if (timercmp(&next_probe,&cur_time,<)){
 			timeout=0;
 		}
@@ -998,18 +1028,6 @@ struct alarm_cfg *a;
 				}
 			}
 			pfd[i].revents=0;
-		}
-		if (status_request){
-			status_request=0;
-			if (config->status_file){
-				logit("SIGUSR1 received, writing status.");
-				write_status();
-			}
-		}
-		if (reload_request){
-			reload_request=0;
-			logit("SIGHUP received, reloading configuration.");
-			reload_config();
 		}
 	}
 	while(delayed_reports!=NULL) make_delayed_reports();
