@@ -253,7 +253,7 @@ time_t tim;
 
 void write_report(FILE *f,struct target *t,struct alarm_cfg *a,int on){
 time_t tm;
-	
+
 	tm=time(NULL);
 	fprintf(f,"%s|%s|%i|%i|%u|",t->name, t->description, t->last_sent+1,
 		t->received, t->last_received_tv.tv_sec);
@@ -373,7 +373,7 @@ int ret;
 	if (cur_time==NULL){
 		gettimeofday(&ct,NULL);
 		cur_time=&ct;
-	}	
+	}
 	if (!timerisset(next_event) || timercmp(next_event,cur_time,<)){
 		if (!timerisset(next_event)){
 			*next_event=*cur_time;
@@ -442,7 +442,7 @@ struct alarm_cfg *a;
 		debug("Sequence number mismatch.");
 		return;
 	}
-		
+
 	for(t=targets;t!=NULL;t=t->next){
 		if (t==ti->target_id) break;
 	}
@@ -472,14 +472,14 @@ struct alarm_cfg *a;
 		t->recently_lost--;
 #endif
 	t->queue[i]=1;
-	
+
 	if (AVG_LOSS_KNOWN(t)){
 		avg_loss=AVG_LOSS(t);
 	}else
 		avg_loss=0;
 
 	debug("(avg. loss: %5.1f%%)",avg_loss);
-	
+
 	paa=NULL;
 	for(aal=t->active_alarms;aal;aal=naa){
 		naa=aal->next;
@@ -704,7 +704,7 @@ int l;
 			t->queue=NEW(char,l);
 			assert(t->queue!=NULL);
 		}
-	
+
 		/* t->recently_lost=tc->avg_loss_samples; */
 		l=tc->avg_delay_samples;
 		if (t->rbuf) {
@@ -774,7 +774,7 @@ char *buf1,*buf2;
 #endif
 
 	if (config->status_file==NULL) return;
-	
+
 	f=fopen(config->status_file,"w");
 	if (f==NULL){
 		logit("Couldn't open status file");
@@ -784,7 +784,7 @@ char *buf1,*buf2;
 	tm=time(NULL);
 	for(t=targets;t;t=t->next){
 		fprintf(f,"%s|%s|%s|%i|%i|%u|",t->name, t->config->srcip, t->description, t->last_sent+1,
-                	t->received, t->last_received_tv.tv_sec);
+			t->received, t->last_received_tv.tv_sec);
 		fprintf(f,"%0.3fms|", AVG_DELAY(t));
 		if (AVG_LOSS_KNOWN(t)){
 			fprintf(f,"%0.1f%%",AVG_LOSS(t));
@@ -854,7 +854,7 @@ struct pollfd pfd[1024];
 int timeout, timedelta;
 int npfd=0;
 int i;
-char buf[100];	
+char buf[100];
 int downtime;
 struct alarm_list *al,*nal;
 struct active_alarm_list *aal;
@@ -1003,4 +1003,3 @@ struct alarm_cfg *a;
 	free_targets();
 	if (macros_buf!=NULL) free(macros_buf);
 }
-

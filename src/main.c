@@ -51,7 +51,7 @@
 struct target *targets=NULL;
 struct config default_config={
 	NULL,NULL,NULL,		/* pool, alarms, targets */
-		{ 		/* alarm defaults */
+		{		/* alarm defaults */
 				AL_NONE,	/* type */
 				"default",	/* name */
 				NULL,		/* mailto */
@@ -81,7 +81,7 @@ struct config default_config={
 				NULL,0,NULL	/* alarms, alarms_override, next */
 		},
 	0,			/* rrd_interval */
-	0, 			/* debug */
+	0,			/* debug */
 	"nobody",		/* user */
 	NULL,			/* group */
 	"/usr/lib/sendmail -t",	/* mailer */
@@ -263,9 +263,9 @@ char *graph_location="/apinger/";
 		for(i=0;i<255;i++)
 			if (i!=icmp_sock && i!=icmp6_sock)
 				close(i);
-		setsid();	
+		setsid();
 	}
-	
+
 	if (initgroups(pw->pw_name,pw->pw_gid)){
 		myperror("initgroups");
 		return 1;
@@ -310,4 +310,3 @@ char *graph_location="/apinger/";
 
 	return 0;
 }
-

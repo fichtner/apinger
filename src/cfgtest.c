@@ -24,7 +24,7 @@
 
 struct config default_config={
 	NULL,NULL,NULL,		/* pool, alarms, targets */
-		{ 		/* alarm defaults */
+		{		/* alarm defaults */
 				AL_NONE,	/* type */
 				"default",	/* name */
 				"root",		/* mailto */
@@ -43,7 +43,7 @@ struct config default_config={
 
 				NULL,NULL	/* alarms, next */
 		},
-	0, 			/* debug */
+	0,			/* debug */
 	"nobody",		/* user */
 	NULL,			/* group */
 	"/var/run/apinger.pid"	/* pid file */
@@ -54,7 +54,7 @@ int foreground=1;
 
 int main(int argc,char *argv[]){
 int ret;
-	
+
 	ret=load_config("/etc/apinger.conf");
 	return ret;
 }

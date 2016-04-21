@@ -76,7 +76,7 @@ time_t cur_t;
 #if defined(HAVE_SETVBUF) && defined(_IOLBF)
 	setvbuf(rrdtool_pipe, (char *)NULL, _IOLBF, 0);
 #endif
-	return 0;	
+	return 0;
 }
 
 int rrd_write(const char *format,...){
@@ -113,7 +113,7 @@ int ret;
 			}
 		}
 #endif
-		if (rrdtool_pipe==NULL) 
+		if (rrdtool_pipe==NULL)
 			if (rrd_init()) return;
 		ret=rrd_write("create %s"
 				" DS:loss:GAUGE:600:0:100"
@@ -143,7 +143,7 @@ int ret;
 	}
 	for(t=targets;t!=NULL;t=t->next){
 		if (t->config->rrd_filename==NULL) continue;
-		if (rrdtool_pipe==NULL) 
+		if (rrdtool_pipe==NULL)
 			if (rrd_init()) return;
 		filename=subst_macros(t->config->rrd_filename,t,NULL,0);
 		ret=rrd_write("update %s -t loss:delay %li",filename,(long)time(NULL));
@@ -226,7 +226,7 @@ int num_esc;
 		printf("GPRINT:delay:AVERAGE:\"Average\\: %%7.3lf%%ss\"\n");
 		printf("GPRINT:delay:MAX:\"Maximum\\: %%7.3lf%%ss\\j\"\n");
 		printf("></P>");
-		
+
 		printf("<P><RRD::GRAPH %s/%s-loss.png\n",graph_dir,base_filename);
 		printf("--imginfo '<IMG SRC=\"%s/%%s\" WIDTH=\"%%lu\" HEIGHT=\"%%lu\">'\n",
 						graph_location);

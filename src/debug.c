@@ -77,8 +77,8 @@ va_list args;
 }
 
 void myperror(const char *prefix){
-	if (foreground) 
+	if (foreground)
 		perror(prefix);
-	else 
+	else
 		syslog(LOG_ERR,"%s: %s",prefix,strerror(errno));
 }

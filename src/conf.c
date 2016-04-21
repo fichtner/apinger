@@ -116,7 +116,7 @@ void add_target(void){
 
 struct alarm_list *alarm2list(const char *aname,struct alarm_list *list){
 struct alarm_cfg *ac;
-struct alarm_list *al; 
+struct alarm_list *al;
 
 	for(ac=cur_config.alarms;ac!=NULL;ac=ac->next)
 		if (strcmp(ac->name,aname)==0) break;
@@ -138,14 +138,14 @@ int yyparse(void);
 int load_config(const char *filename){
 struct target_cfg *t;
 struct alarm_cfg *a;
-struct alarm_list *al;	
+struct alarm_list *al;
 int ret;
 
 	yyin=fopen(filename,"r");
 	if (yyin==NULL) return -1;
 	yydebug=0;
 	memset(&yylloc,0,sizeof(yylloc));
-	cur_config=default_config;	
+	cur_config=default_config;
 	ret=yyparse();
 	fclose(yyin);
 	if (ret==0){
@@ -203,7 +203,7 @@ int ret;
 			pool_clear(&pool);
 			config=NULL;
 		}
-	
+
 		config=PNEW(cur_config.pool,struct config,1);
 		memcpy(config,&cur_config,sizeof(struct config));
 	}
@@ -217,4 +217,3 @@ struct pool_item *pool;
 	pool=config->pool;
 	pool_clear(&pool);
 }
-

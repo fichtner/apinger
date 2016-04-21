@@ -24,7 +24,7 @@ cfgtest_SOURCES = \
 		cfgparser1.y \
 		cfgparser2.l \
 		cfgtest.c \
-		conf.c 
+		conf.c
 
 AM_CFLAGS=-D"SYSCONFDIR=\"$(sysconfdir)\""
 

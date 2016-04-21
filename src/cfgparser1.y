@@ -129,8 +129,8 @@ config:	/* */
 	| PID_FILE string { cur_config.pid_file=$2; }
 	| STATUS '{' statuscfg '}'
 	| RRD INTERVAL TIME { cur_config.rrd_interval=$3; }
-	| alarm 
-	| target 
+	| alarm
+	| target
 	| config separator config
 	| error
 		{
@@ -140,39 +140,39 @@ config:	/* */
 		}
 ;
 
-makealarm: 	{ $$=make_alarm(); } 
+makealarm:	{ $$=make_alarm(); }
 ;
 
-maketarget: 	{ $$=make_target(); }
+maketarget:	{ $$=make_target(); }
 ;
 
-getdefalarm: 	{ 
-	   		$$=&cur_config.alarm_defaults; 
+getdefalarm:	{
+			$$=&cur_config.alarm_defaults;
 			cur_alarm=$$;
-	   	} 
+		}
 ;
 
-getdeftarget: 	{ 
-	    		$$=&cur_config.target_defaults; 
+getdeftarget:	{
+			$$=&cur_config.target_defaults;
 			cur_target=$$;
 		}
 ;
 
-alarm:	ALARM getdefalarm DEFAULT '{' alarmcommoncfg '}' 
-     	| ALARM makealarm DOWN string '{' alarmdowncfg '}' 
-		{ 
+alarm:	ALARM getdefalarm DEFAULT '{' alarmcommoncfg '}'
+	| ALARM makealarm DOWN string '{' alarmdowncfg '}'
+		{
 			cur_alarm->name=$4;
-			add_alarm(AL_DOWN); 
+			add_alarm(AL_DOWN);
 		}
-     	| ALARM makealarm LOSS string '{' alarmlosscfg '}' 
-		{ 
+	| ALARM makealarm LOSS string '{' alarmlosscfg '}'
+		{
 			cur_alarm->name=$4;
-			add_alarm(AL_LOSS); 
+			add_alarm(AL_LOSS);
 		}
-	| ALARM makealarm DELAY string '{' alarmdelaycfg '}' 
-		{ 
+	| ALARM makealarm DELAY string '{' alarmdelaycfg '}'
+		{
 			cur_alarm->name=$4;
-			add_alarm(AL_DELAY); 
+			add_alarm(AL_DELAY);
 		}
 ;
 
@@ -181,53 +181,53 @@ alarmcommoncfg: alarmcommon
 ;
 
 alarmlosscfg: alarmcommon
-	| PERCENT_LOW INTEGER 
+	| PERCENT_LOW INTEGER
 		{ cur_alarm->p.lh.low=$2; }
-	| PERCENT_HIGH INTEGER 
+	| PERCENT_HIGH INTEGER
 		{ cur_alarm->p.lh.high=$2; }
 	| alarmlosscfg separator alarmlosscfg
 ;
 
 alarmdelaycfg: alarmcommon
-	| DELAY_LOW TIME 
+	| DELAY_LOW TIME
 		{ cur_alarm->p.lh.low=$2; }
-	| DELAY_HIGH TIME 
+	| DELAY_HIGH TIME
 		{ cur_alarm->p.lh.high=$2; }
 	| alarmdelaycfg separator alarmdelaycfg
 ;
 
 alarmdowncfg: alarmcommon
-	| TIME_ TIME 
+	| TIME_ TIME
 		{ cur_alarm->p.val=$2; }
 	| alarmdowncfg separator alarmdowncfg
 ;
 
-alarmcommon: /* */ 
-	| MAILTO string	
+alarmcommon: /* */
+	| MAILTO string
 		{ cur_alarm->mailto=$2; }
-	| MAILFROM string 
+	| MAILFROM string
 		{ cur_alarm->mailfrom=$2; }
-	| MAILENVFROM string 
+	| MAILENVFROM string
 		{ cur_alarm->mailenvfrom=$2; }
-	| MAILSUBJECT string 
+	| MAILSUBJECT string
 		{ cur_alarm->mailsubject=$2; }
-	| COMMAND string 
-		{ 
-			if (cur_alarm->command_on==NULL) cur_alarm->command_on=$2; 
-			if (cur_alarm->command_off==NULL) cur_alarm->command_off=$2; 
+	| COMMAND string
+		{
+			if (cur_alarm->command_on==NULL) cur_alarm->command_on=$2;
+			if (cur_alarm->command_off==NULL) cur_alarm->command_off=$2;
 		}
-	| COMMAND ON string 
+	| COMMAND ON string
 		{ cur_alarm->command_on=$3; }
-	| COMMAND OFF string 
+	| COMMAND OFF string
 		{ cur_alarm->command_off=$3; }
-	| PIPE string 
-		{ 
-			if (cur_alarm->pipe_on==NULL) cur_alarm->pipe_on=$2; 
-			if (cur_alarm->pipe_off==NULL) cur_alarm->pipe_off=$2; 
+	| PIPE string
+		{
+			if (cur_alarm->pipe_on==NULL) cur_alarm->pipe_on=$2;
+			if (cur_alarm->pipe_off==NULL) cur_alarm->pipe_off=$2;
 		}
-	| PIPE ON string 
+	| PIPE ON string
 		{ cur_alarm->pipe_on=$3; }
-	| PIPE OFF string 
+	| PIPE OFF string
 		{ cur_alarm->pipe_off=$3; }
 	| COMBINE TIME
 		{ cur_alarm->combine_interval=$2; }
@@ -238,18 +238,18 @@ alarmcommon: /* */
 ;
 
 
-target:	TARGET getdeftarget DEFAULT '{' targetcfg '}' 
-     	| TARGET maketarget string '{' targetcfg '}' 
-		{ 
+target:	TARGET getdeftarget DEFAULT '{' targetcfg '}'
+	| TARGET maketarget string '{' targetcfg '}'
+		{
 			cur_target->name=$3;
-			add_target(); 
+			add_target();
 		}
 ;
 
-targetcfg: /* */ 
-	| DESCRIPTION string 
+targetcfg: /* */
+	| DESCRIPTION string
 		{ cur_target->description=$2; }
-	| SRCIP string 
+	| SRCIP string
 		{ cur_target->srcip = $2; }
 	| ALARMS alarmlist
 		{ cur_target->alarms=$2; }
@@ -274,12 +274,12 @@ targetcfg: /* */
 
 alarmlist: string
 		{ $$=alarm2list($1,NULL); }
-	| alarmlist ',' string 
+	| alarmlist ',' string
 		{ $$=alarm2list($3,$1); }
 ;
 
-statuscfg: /* */ 
-	| FILE_ string 
+statuscfg: /* */
+	| FILE_ string
 		{ cur_config.status_file=$2; }
 	| INTERVAL INTEGER
 		{ cur_config.status_interval=$2; }
@@ -309,4 +309,3 @@ separator: '\n'
 void yyerror (const char *s) {
 	logit("%s", s);
 }
-

@@ -105,7 +105,7 @@ int ret;
 	p->icmp6_id=ident;
 
 #ifdef HAVE_SCHED_YIELD
-	/* Give away our time now, or we may be stopped between gettimeofday() and sendto() */ 
+	/* Give away our time now, or we may be stopped between gettimeofday() and sendto() */
 	sched_yield();
 #endif
 	gettimeofday(&cur_time,NULL);
@@ -154,7 +154,7 @@ reloophack6:
 	if (icmp->icmp6_id != ident){
 		debug("Alien echo-reply received from xxx. Expected %i, received %i", ident, icmp->icmp6_id);
 		goto reloophack6;
-		return;	
+		return;
 	}
 #if 0
 	name=inet_ntop(AF_INET6,&from.sin6_addr,abuf,100);

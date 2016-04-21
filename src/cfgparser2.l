@@ -35,15 +35,15 @@ DIGIT	[0-9]
 
 %%
 
-{DIGIT}+ 		{ LOC; LOCINC; yylval.i=atoi(yytext); return INTEGER; }
+{DIGIT}+		{ LOC; LOCINC; yylval.i=atoi(yytext); return INTEGER; }
 
-{DIGIT}+("."{DIGIT}+)?(([um]?s)|m|h) { 
+{DIGIT}+("."{DIGIT}+)?(([um]?s)|m|h) {
 			double f;
 			double mn=1;
 
 			LOC;
-			LOCINC; 
-			
+			LOCINC;
+
 			if (yyleng>1 && yytext[yyleng-1]=='h'){
 				yytext[yyleng-1]='\000';
 				mn=60*60*1000;
@@ -117,12 +117,12 @@ yes		{ LOC; LOCINC; return YES; }
 [{};,]		{ LOC; LOCINC; return yytext[0]; }
 \n		{ LOC; yylloc.last_line++; yylloc.last_column=0; return '\n'; }
 
-"//"[^\n]*	{ LOC; LOCINC; } 
+"//"[^\n]*	{ LOC; LOCINC; }
 "#"[^\n]*	{ LOC; LOCINC; }
 
 [ \t]+		{ LOC; LOCINC; }
 
-.           	{ LOC; LOCINC; yylval.s=yytext; 
+.		{ LOC; LOCINC; yylval.s=yytext;
 		  logit("Unexpected character: '%c'", yytext[0]);
 		  return ERROR;
 		}
@@ -130,6 +130,6 @@ yes		{ LOC; LOCINC; return YES; }
 %%
 
 void *p=yyunput;
-/* 
- vi: ft=lex 
+/*
+ vi: ft=lex
 */

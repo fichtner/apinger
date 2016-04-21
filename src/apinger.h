@@ -65,7 +65,7 @@ struct active_alarm_list {
 struct target {
 	char *name;		/* name (IP address as string) */
 	char *description;	/* description */
-	
+
 	union addr addr;	/* target address */
 
 	char *queue;		/*
@@ -89,7 +89,7 @@ struct target {
 
 	struct active_alarm_list *active_alarms;
 	struct target_cfg *config;
-	
+
 	struct target *next;
 	union addr ifaddr;	/* iface address */
 };
