@@ -43,6 +43,8 @@
 # include <arpa/inet.h>
 #endif
 
+#include <netdb.h>
+
 #include "debug.h"
 #include "tv_macros.h"
 #include "rrd.h"
@@ -57,10 +59,8 @@
 
 struct delayed_report {
 	int on;
-	char *msgid;
-	char *lastmsgid;
 	struct alarm_cfg *a;
-	struct target t;
+	struct target *t;
 	struct timeval timestamp;
 	struct delayed_report *next;
 };
@@ -79,22 +79,7 @@ struct active_alarm_list *al;
 	return 0;
 }
 
-static char msgid_buf[1024];
-static char hostnamebuf[256]="-";
-
-char *gen_msgid(struct target *t,char *suff){
-struct timeval cur_time;
-	
-	gettimeofday(&cur_time,NULL);
-	
-	gethostname(hostnamebuf,sizeof(hostnamebuf));
-	sprintf(msgid_buf,"<%p.%li.%s@%s>",
-				t,(long int)(cur_time.tv_usec/1000+cur_time.tv_sec*1000),
-				suff,hostnamebuf);
-	return strdup(msgid_buf);
-}
-
-char *alarm_on(struct target *t,struct alarm_cfg *a){
+void alarm_on(struct target *t,struct alarm_cfg *a){
 struct active_alarm_list *al;
 struct timeval cur_time,tv;
 
@@ -102,7 +87,6 @@ struct timeval cur_time,tv;
 	al=NEW(struct active_alarm_list,1);
 	al->next=t->active_alarms;
 	al->alarm=a;
-	al->msgid=gen_msgid(t,"on");
 	al->num_repeats=0;
 	if (a->repeat_interval){
 		tv.tv_sec=a->repeat_interval/1000;
@@ -110,12 +94,10 @@ struct timeval cur_time,tv;
 		timeradd(&cur_time,&tv,&al->next_repeat);
 	}
 	t->active_alarms=al;
-	return strdup(al->msgid);
 }
 
-char *alarm_off(struct target *t,struct alarm_cfg *a){
+void alarm_off(struct target *t,struct alarm_cfg *a){
 struct active_alarm_list *al,*pa,*na;
-char *msgid;
 
 	pa=NULL;
 	for(al=t->active_alarms;al;al=na){
@@ -125,14 +107,13 @@ char *msgid;
 				pa->next=na;
 			else
 				t->active_alarms=na;
-			msgid=al->msgid;
 			free(al);
-			return msgid;
+			return;
 		}
 		else pa=al;
 	}
 	logit("Alarm '%s' not found in '%s'",a->name,t->name);
-	return NULL;
+	return;
 }
 
 static char *macros_buf=NULL;
@@ -239,7 +220,7 @@ time_t tim;
 			values[n]="";
 			break;
 		}
-		l+=strlen(values[n])-1;
+		l+=strlen(values[n])+1;
 		n++;
 	}
 	values[n]=NULL;
@@ -247,11 +228,12 @@ time_t tim;
 	if (macros_buf == NULL){
 		macros_buf=NEW(char,l);
 		macros_buf_l=l;
-	}else if (macros_buf_l < l){
+	}else if (macros_buf_l != l){
 		macros_buf=(char *)realloc(macros_buf,l);
 		macros_buf_l=l;
 	}
 	assert(macros_buf!=NULL);
+	memset(macros_buf, 0, macros_buf_l);
 	p=macros_buf;
 	n=0;
 	for(i=0;i<sl;i++){
@@ -284,53 +266,11 @@ time_t tm;
 	fprintf(f, "\n");
 }
 
-void make_reports(struct target *t,struct alarm_cfg *a,int on,char* thisid,char* lastid){
+void make_reports(struct target *t,struct alarm_cfg *a,int on){
 FILE *p;
-char buf[1024];
-char *mailto,*mailfrom,*mailenvfrom;
 int ret;
 const char *command;
 
-	mailto=a->mailto;
-	mailenvfrom=a->mailenvfrom;
-	if (mailenvfrom!=NULL && strpbrk(mailenvfrom,"\\'")!=0)
-		mailenvfrom=NULL;
-	mailfrom=a->mailfrom;
-	if (mailto){
-		if (mailenvfrom){
-			snprintf(buf,1024,"%s -f'%s'",config->mailer,mailenvfrom);
-		}
-		else{
-			snprintf(buf,1024,"%s",config->mailer);
-		}
-		debug("Popening: %s",buf);
-		p=popen(buf,"w");
-		if (!p){
-			myperror("Couldn't send mail, popen:");
-			return;
-		}
-		fprintf(p,"Subject: %s\n",subst_macros(a->mailsubject,t,a,on));
-		fprintf(p,"To: %s\n",subst_macros(mailto,t,a,on));
-		if (mailfrom) {
-			fprintf(p,"From: %s\n",subst_macros(mailfrom,t,a,on));
-		}
-		if (thisid!=NULL)
-			fprintf(p,"Message-Id: %s\n",thisid);
-		if (lastid!=NULL && lastid[0]!='\000')
-			fprintf(p,"References: %s\n",lastid);
-				
-		fprintf(p,"\n");
-		write_report(p,t,a,on);
-		ret=pclose(p);
-		if (!WIFEXITED(ret)){
-			logit("Error while sending mail.\n");
-			logit("sendmail terminated abnormally.\n");
-		}
-		else if (WEXITSTATUS(ret)!=0){
-			logit("Error while sending mail.\n");
-			logit("sendmail exited with status: %i\n",WEXITSTATUS(ret));
-		}
-	}
 	if (on>0) command=a->pipe_on;
 	else command=a->pipe_off;
 	if (command){
@@ -361,126 +301,57 @@ const char *command;
 		debug("Starting: %s",command);
 		ret=system(command);
 		if (!WIFEXITED(ret)){
-			logit("Error while starting command.");
+			logit("Error while starting command form alarm(%s) on target(%s-%s)", a->name, t->name, t->description);
 			logit("command (%s) terminated abnormally.",command);
 		}
 		else if (WEXITSTATUS(ret)!=0){
-			logit("Error while starting command.");
+			logit("Error while starting command form alarm(%s) on target(%s-%s)", a->name, t->name, t->description);
 			logit("command (%s) exited with status: %i",command,WEXITSTATUS(ret));
 		}
 	}
 }
 
 void make_delayed_reports(void){
-struct alarm_cfg *alarm;
-struct target target;
-int on;
-char *msgid,*references;
-struct delayed_report *dr,*pdr,*ndr;
-int names_len,descriptions_len,references_len;
-char *names,*descriptions;
-	
+	struct delayed_report *wdr;
 
 	if (delayed_reports==NULL) return;
-	on=delayed_reports->on;
-	msgid=strdup(delayed_reports->msgid);
-	alarm=delayed_reports->a;
-	target=delayed_reports->t;
-	names_len=descriptions_len=references_len=0;
-	for(dr=delayed_reports;dr;dr=dr->next){
-		if (dr->a==alarm && dr->on==on){
-			names_len+=strlen(dr->t.name)+1;
-			descriptions_len+=strlen(dr->t.description)+1;
-			if (dr->lastmsgid){
-				references_len+=strlen(dr->lastmsgid)+1;
-			}
-		}
-	}
 
-	names=NEW(char,names_len+1);
-	names[0]='\000';
-	descriptions=NEW(char,descriptions_len+1);
-	descriptions[0]='\000';
-	references=NEW(char,references_len+1);
-	references[0]='\000';
+	wdr = delayed_reports;
 
-	pdr=NULL;
-	for(dr=delayed_reports;dr;dr=ndr){
-		ndr=dr->next;
-		if (dr->a==alarm && dr->on==on){
-			if (on){
-				struct active_alarm_list *al;
-				struct target *t;
-				for(t=targets;t;t=t->next){
-					if (strcmp(dr->t.name,t->name)) continue;
-					for(al=t->active_alarms;al;al=al->next){
-						if (al->alarm==alarm){
-							if (al->msgid!=NULL) free(al->msgid);
-							al->msgid=strdup(msgid);
-						}
-					}
-					break;
-				}
-			}
-			if (names[0]!='\000') strcat(names,",");
-			strcat(names,dr->t.name);
-			if (descriptions[0]!='\000') strcat(descriptions,",");
-			strcat(descriptions,dr->t.description);
-			if (dr->lastmsgid){
-				if (references[0]!='\000') strcat(references," ");
-				strcat(references,dr->lastmsgid);
-			}
-			if (pdr!=NULL) 
-				pdr->next=ndr;
-			else
-				delayed_reports=ndr;
-			free(dr->msgid);
-			free(dr->lastmsgid);
-			free(dr);
-		}
-		else pdr=dr;
-	}
+	make_reports(wdr->t, wdr->a, wdr->on);
 
-	target.name=names;
-	target.description=descriptions;
-
-	make_reports(&target,alarm,on,msgid,references);
-
-	free(msgid);
-	free(names);
-	free(descriptions);
-	free(references);
+	delayed_reports = wdr->next;
+	free(wdr);
 }
 
 void toggle_alarm(struct target *t,struct alarm_cfg *a,int on){
-char *thisid=NULL,*lastid=NULL;
 struct delayed_report *dr,*tdr;
 
 	if (on>0){
 		logit("ALARM: %s(%s)  *** %s ***",t->description,t->name,a->name);
-		thisid=alarm_on(t,a);
+		alarm_on(t,a);
 	}
 	else{
-		lastid=alarm_off(t,a);
-		thisid=gen_msgid(t,"off");
+		alarm_off(t,a);
 		if (on==0)
 			logit("alarm canceled: %s(%s)  *** %s ***",t->description,t->name,a->name);
 		else
 			logit("alarm canceled (config reload): %s(%s)  *** %s ***",t->description,t->name,a->name);
 	}
 
+	if (on < 0) {
+		return;
+	}
+
 	if (a->combine_interval>0){
 		for(tdr=delayed_reports;tdr!=NULL && tdr->next!=NULL;tdr=tdr->next){
-			if (strcmp(tdr->t.name,t->name)==0 && tdr->a==a && tdr->on==on) return;
+			if (strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
 		}
-		if (tdr!=NULL && strcmp(tdr->t.name,t->name)==0 && tdr->a==a && tdr->on==on) return;
+		if (tdr!=NULL && strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
 		dr=NEW(struct delayed_report,1);
 		assert(dr!=NULL);
-		dr->t=*t;
+		dr->t=t;
 		dr->a=a;
-		dr->msgid=strdup(thisid);
-		if (lastid) dr->lastmsgid=strdup(lastid);
-		else dr->lastmsgid=NULL;
 		dr->on=on;
 		gettimeofday(&dr->timestamp,NULL);
 		dr->next=NULL;
@@ -489,9 +360,9 @@ struct delayed_report *dr,*tdr;
 		else
 			tdr->next=dr;
 	}
-	else make_reports(t,a,on,thisid,lastid);
-	free(thisid);
-	free(lastid);
+	else {
+		make_reports(t,a,on);
+	}
 }
 
 /* if a time came for the next event schedule next one in given interval and return 1 */
@@ -549,11 +420,14 @@ int seq;
 			debug("Recently lost packets: %i",t->recently_lost);
 	}
 
+	if (t->recently_lost < 0)
+		t->recently_lost = 0;
+
 	t->upsent++;
 }
 
 
-void analyze_reply(struct timeval time_recv,int icmp_seq,struct trace_info *ti){
+void analyze_reply(struct timeval *time_recv,int icmp_seq,struct trace_info *ti, int timedelta){
 struct target *t;
 struct timeval tv;
 double delay,avg_delay,avg_loss;
@@ -578,24 +452,25 @@ struct alarm_cfg *a;
 	}
 	previous_received=t->last_received;
 	if (ti->seq>t->last_received) t->last_received=ti->seq;
-	t->last_received_tv=time_recv;
-	timersub(&time_recv,&ti->timestamp,&tv);
-	delay=tv.tv_sec*1000.0+((double)tv.tv_usec)/1000.0;
-	debug("#%i from %s(%s) delay: %4.3fms",ti->seq,t->description,t->name,delay);
-	if (t->received >= t->config->avg_delay_samples)
-		tmp=t->rbuf[t->received%t->config->avg_delay_samples];
-	else
-		tmp=0;
+	t->last_received_tv=*time_recv;
+	timersub(time_recv,&ti->timestamp,&tv);
+	delay=tv.tv_sec*1000.0+((double)tv.tv_usec)/1000.0 - timedelta;
+	//if (delay < 0) delay = 0;
+	tmp=t->rbuf[t->received%t->config->avg_delay_samples];
 	t->rbuf[t->received%t->config->avg_delay_samples]=delay;
 	t->delay_sum+=delay-tmp;
+	debug("#%i from %s(%s) delay: %4.3fms/%4.3fms/%4.3fms received = %d ",ti->seq,t->description,t->name,delay,tmp,t->delay_sum, t->received);
+	if (t->delay_sum < 0) t->delay_sum = 0;
 	t->received++;
 
 	avg_delay=AVG_DELAY(t);
 	debug("(avg: %4.3fms)",avg_delay);
 
 	i=ti->seq%(t->config->avg_loss_delay_samples+t->config->avg_loss_samples);
+#if 0
 	if (!t->queue[i] && ti->seq<=t->last_sent-t->config->avg_loss_delay_samples)
 		t->recently_lost--;
+#endif
 	t->queue[i]=1;
 	
 	if (AVG_LOSS_KNOWN(t)){
@@ -638,46 +513,100 @@ struct alarm_cfg *a;
 	}
 }
 
-void configure_targets(int reload){
+void configure_targets(struct config *cfg, int reload){
 struct target *t,*pt,*nt;
 struct target_cfg *tc;
-struct active_alarm_list *al,*nal;
+struct delayed_report *dr, *pdr, *ndr;
+struct active_alarm_list *aal,*naal;
+struct alarm_cfg *a, *na;
 union addr addr, srcaddr;
+#ifdef HAVE_IPV6
+struct addrinfo hints, *res;
+#endif
 int r;
 int l;
 
 	/* delete all not configured targets */
 	pt=NULL;
 	for(t=targets;t;t=nt){
-		for(tc=config->targets;tc;tc=tc->next)
-			if (strcmp(tc->name,t->name)==0)
+		for(tc=cfg->targets;tc;tc=tc->next) {
+			if (strlen(tc->srcip) != strlen(t->config->srcip) || strcmp(tc->srcip, t->config->srcip))
+				continue;
+			if (strlen(tc->name) == strlen(t->name) && strcmp(tc->name,t->name)==0)
 				break;
+		}
 		nt=t->next;
 		if (tc==NULL){
 			if (pt==NULL)
-				targets=t;
+				targets=nt;
 			else
 				pt->next=nt;
-			for(al=t->active_alarms;al;al=nal){
-				nal=al->next;
-				free(al);
+			for(aal=t->active_alarms;aal;aal=naal){
+				naal=aal->next;
+				toggle_alarm(t,aal->alarm,-1);
 			}
 			if (t->socket)
 				close(t->socket);
+
+			if (delayed_reports != NULL) {
+				pdr = NULL;
+				for (dr = delayed_reports; dr != NULL; dr = ndr) {
+					ndr = dr->next;
+					if (dr->t == t) {
+						if (pdr == NULL)
+							delayed_reports = ndr;
+						else
+							pdr->next = ndr;
+						free(dr);
+					} else
+						pdr = dr;
+				}
+			}
+
 			free(t->queue);
 			free(t->rbuf);
+			debug("Releasing target %s(%s)", t->name, t->description);
 			free(t->name);
 			free(t->description);
 			free(t);
 		}
-		else pt=t;
+		else {
+			pt=t;
+
+			for(aal=t->active_alarms;aal;aal=naal){
+				naal = aal->next;
+				for (a=cfg->alarms;a;a=na){
+					na = a->next;
+					if (aal->alarm->type == a->type && !strcmp(aal->alarm->name, a->name)) {
+						debug("Sticking to alrm %s since its still active", a->name);
+						aal->alarm = a;
+						break;
+					}
+				}
+			}
+			if (delayed_reports != NULL) {
+				for (dr = delayed_reports; dr != NULL; dr = dr->next) {
+					if (dr->t == t) {
+						for (a=cfg->alarms;a;a=a->next) {
+							if (dr->a->type == a->type && !strcmp(dr->a->name, a->name)) {
+								debug("Updating delayed report for target(%s) and alarm(%s)", t->name, a->name);
+								dr->a = a;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/* Update target configuration */
-	for(tc=config->targets;tc;tc=tc->next){
-		for(t=targets;t;t=t->next)
-			if (!strcmp(t->name,tc->name))
+	for(tc=cfg->targets;tc;tc=tc->next){
+		for(t=targets;t;t=t->next) {
+			if (strlen(tc->srcip) != strlen(t->config->srcip) || strcmp(tc->srcip, t->config->srcip))
+				continue;
+			if (strlen(t->name) == strlen(tc->name) && !strcmp(t->name,tc->name))
 				break;
+		}
 		if (t==NULL) { /* new target */
 			memset(&addr,0,sizeof(addr));
 			r=inet_pton(AF_INET,tc->name,&addr.addr4.sin_addr);
@@ -685,13 +614,22 @@ int l;
 				addr.addr.sa_family=AF_INET;
 			}else{
 #ifdef HAVE_IPV6
-				r=inet_pton(AF_INET6,tc->name,&addr.addr6.sin6_addr);
-				if (r==0){
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_family = AF_INET6;
+				hints.ai_flags = AI_NUMERICHOST;
+				r = getaddrinfo(tc->name, NULL, &hints, &res);
+				if (r != 0) {
+					r=inet_pton(AF_INET6,tc->name,&addr.addr6.sin6_addr);
+					if (r==0){
 #endif
-					logit("Bad host address: %s\n",tc->name);
-					logit("Ignoring target %s\n",tc->name);
-					continue;
+						logit("Bad host address: %s\n",tc->name);
+						logit("Ignoring target %s\n",tc->name);
+						continue;
 #ifdef HAVE_IPV6
+					}
+				} else {
+					memcpy(&addr.addr6, res->ai_addr, res->ai_addrlen);
+					freeaddrinfo(res);
 				}
 				if (icmp6_sock<0){
 					logit("Sorry, IPv6 is not available\n");
@@ -708,13 +646,22 @@ int l;
 				srcaddr.addr.sa_family=AF_INET;
 			}else{
 #ifdef HAVE_IPV6
-				r=inet_pton(AF_INET6,tc->srcip,&srcaddr.addr6.sin6_addr);
-				if (r==0){
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_family = AF_INET6;
+				hints.ai_flags = AI_NUMERICHOST;
+				r = getaddrinfo(tc->srcip, NULL, &hints, &res);
+				if (r != 0) {
+					r=inet_pton(AF_INET6,tc->srcip,&srcaddr.addr6.sin6_addr);
+					if (r==0){
 #endif
-					logit("Bad srcip address %s for target %s\n", tc->srcip, tc->name);
-					logit("Ignoring target %s\n",tc->name);
-					continue;
+						logit("Bad srcip address %s for target %s\n", tc->srcip, tc->name);
+						logit("Ignoring target %s\n",tc->name);
+						continue;
 #ifdef HAVE_IPV6
+					}
+				} else {
+					memcpy(&srcaddr.addr6, res->ai_addr, res->ai_addrlen);
+					freeaddrinfo(res);
 				}
 				if (icmp6_sock<0){
 					logit("Sorry, IPv6 is not available\n");
@@ -725,34 +672,51 @@ int l;
 #endif
 			}
 			t=NEW(struct target,1);
-			memset(t,0,sizeof(struct target));
 			t->name=strdup(tc->name);
 			t->description=strdup(tc->description);
+			debug("Creating new target %s(%s)", t->name, t->description);
 			t->addr=addr;
 			t->ifaddr=srcaddr;
 			t->next=targets;
+			t->config=tc;
+			targets=t;
 			if(t->addr.addr.sa_family==AF_INET) make_icmp_socket(t);
 			if(t->addr.addr.sa_family==AF_INET6) make_icmp6_socket(t);
-			targets=t;
 		}
-		t->config=tc;
 		l=tc->avg_loss_delay_samples+tc->avg_loss_samples;
-		if (t->queue)
-			t->queue=(char *)realloc(t->queue,l);
-		else
+		if (t->queue) {
+			if (l > (t->config->avg_loss_delay_samples+t->config->avg_loss_samples)) {
+				t->queue = realloc(t->queue, l);
+				assert(t->queue != NULL);
+				memset(t->queue+(t->config->avg_loss_delay_samples+t->config->avg_loss_samples), 0, l - (t->config->avg_loss_delay_samples+t->config->avg_loss_samples));
+			} else {
+				t->queue = realloc(t->queue, l);
+				assert(t->queue != NULL);
+			}
+		} else {
 			t->queue=NEW(char,l);
-		assert(t->queue!=NULL);
-		if (!reload)
-			memset(t->queue,0,l);
+			assert(t->queue!=NULL);
+		}
+	
 		/* t->recently_lost=tc->avg_loss_samples; */
 		l=tc->avg_delay_samples;
-		if (t->rbuf)
-			t->rbuf=(double *)realloc(t->rbuf,l);
-		else
+		if (t->rbuf) {
+			if (l > t->config->avg_delay_samples) {
+				t->rbuf= realloc(t->rbuf, sizeof(double) * l);
+				assert(t->rbuf!= NULL);
+				memset(t->queue+t->config->avg_delay_samples, 0, l - t->config->avg_delay_samples);
+			} else {
+				int tmp;
+				for (tmp = l; tmp < t->config->avg_delay_samples;tmp++)
+					t->delay_sum -= t->rbuf[tmp];
+				t->rbuf= realloc(t->rbuf, sizeof(double) * l);
+				assert(t->rbuf!= NULL);
+			}
+		} else {
 			t->rbuf=NEW(double,l);
-		assert(t->rbuf!=NULL);
-		if (!reload)
-			memset(t->rbuf,0,l);
+			assert(t->rbuf!=NULL);
+		}
+		t->config=tc;
 	}
 
 	if (targets==NULL){
@@ -760,7 +724,7 @@ int l;
 		exit(1);
 	}
 	gettimeofday(&operation_started,NULL);
-	if (config->rrd_interval)
+	if (cfg->rrd_interval)
 		rrd_create();
 }
 
@@ -787,20 +751,8 @@ struct active_alarm_list *al,*nal;
 
 
 void reload_config(void){
-struct target *t;
-struct active_alarm_list *al,*an;
-struct alarm_cfg *a;
-int r;
-
-	while(delayed_reports!=NULL) make_delayed_reports();
-	for(t=targets;t;t=t->next)
-		for(al=t->active_alarms;al;al=an){
-			an=al->next;
-			a=al->alarm;
-			toggle_alarm(t,a,-1);
-		}
-	r=load_config(config_file);
-	if (r==0) configure_targets(1);
+	if (load_config(config_file))
+                logit("Couldn't read config (\"%s\").",config_file);
 }
 
 void write_status(void){
@@ -809,8 +761,10 @@ struct target *t;
 struct active_alarm_list *al;
 struct alarm_cfg *a;
 time_t tm;
+#if 0
 int i,qp,really_lost;
 char *buf1,*buf2;
+#endif
 
 	if (config->status_file==NULL) return;
 	
@@ -837,6 +791,7 @@ char *buf1,*buf2;
 		}
 		else fprintf(f,"none");
 
+#if 0
 		buf1=NEW(char,t->config->avg_loss_delay_samples+1);
 		buf2=NEW(char,t->config->avg_loss_samples+1);
 		i=t->last_sent%(t->config->avg_loss_delay_samples+t->config->avg_loss_samples);
@@ -876,7 +831,8 @@ char *buf1,*buf2;
 		}
 		free(buf1);
 		free(buf2);
-		
+#endif
+
 		fprintf(f,"\n");
 	}
 	fclose(f);
@@ -895,7 +851,7 @@ struct alarm_list *al,*nal;
 struct active_alarm_list *aal;
 struct alarm_cfg *a;
 
-	configure_targets(0);
+	configure_targets(config, 0);
 	memset(&pfd, '\0', sizeof pfd);
 
 	if (config->status_interval){
@@ -944,8 +900,6 @@ struct alarm_cfg *a;
 		}
 		for(t=targets;t;t=t->next){
 			for(aal=t->active_alarms;aal;aal=aal->next){
-				char *msgid;
-				char buf[100];
 				a=aal->alarm;
 				if (a->repeat_interval<=0)
 					continue;
@@ -955,10 +909,7 @@ struct alarm_cfg *a;
 					continue;
 				aal->num_repeats++;
 				debug("Repeating reports...");
-				sprintf(buf,"%i",aal->num_repeats);
-				msgid=gen_msgid(t,buf);
-				make_reports(t,a,1,msgid,aal->msgid);
-				free(msgid);
+				make_reports(t, a, 1);
 			}
 		}
 		if (config->status_interval){
@@ -970,7 +921,7 @@ struct alarm_cfg *a;
 		if (status_request){
 			status_request=0;
 			if (config->status_file){
-				logit("SIGUSR1 received, writting status.");
+				debug("SIGUSR1 received, writing status.");
 				write_status();
 			}
 			signal(SIGUSR1, signal_handler);
@@ -996,8 +947,10 @@ struct alarm_cfg *a;
 				next_probe=next_report;
 		}
 
+#if 0
 		strftime(buf,100,"%b %d %H:%M:%S",localtime(&next_probe.tv_sec));
 		debug("Next event scheduled for %s",buf);
+#endif
 
 		gettimeofday(&cur_time,NULL);
 		if (timercmp(&cur_time,&event_time,<)){
@@ -1015,19 +968,21 @@ struct alarm_cfg *a;
 			timeout=tv.tv_usec/1000+tv.tv_sec*1000;
 		}
 		debug("Polling, timeout: %5.3fs",((double)timeout)/1000);
-		poll(pfd,npfd,timeout);
+		if (poll(pfd,npfd,timeout) < 0)
+			continue;
+		gettimeofday(&cur_time,NULL);
 		for(i=0;i<npfd;i++){
 			if (!pfd[i].revents&POLLIN) continue;
 			for(t=targets;t;t=t->next){
 				if (t->addr.addr.sa_family==AF_INET) {
 					if (t->socket == pfd[i].fd) {
-						recv_icmp(t);
+						recv_icmp(t, &cur_time, timedelta);
 						break;
 					}
 				}
-				if (t->addr.addr.sa_family==AF_INET6) {
+				else if (t->addr.addr.sa_family==AF_INET6) {
 					if (t->socket == pfd[i].fd) {
-						recv_icmp6(t);
+						recv_icmp6(t, &cur_time, timedelta);
 						break;
 					}
 				}

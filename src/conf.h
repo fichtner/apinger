@@ -112,6 +112,7 @@ void add_target(void);
 struct alarm_list *alarm2list(const char *aname,struct alarm_list *list);
 
 int load_config(const char *filename);
+void configure_targets(struct config *, int);
 void free_config(void);
 
 #endif

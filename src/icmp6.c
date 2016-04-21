@@ -119,71 +119,35 @@ int ret;
 			(struct sockaddr *)&t->addr.addr6,sizeof(t->addr.addr6));
 	if (ret<0){
 		if (config->debug) myperror("sendto");
+		switch (errno) {
+                case EBADF:
+                case ENOTSOCK:
+                        if (t->socket)
+                                close(t->socket);
+                        make_icmp6_socket(t);
+                        break;
+                }
 	}
 }
 
-void recv_icmp6(struct target *t){
+void recv_icmp6(struct target *t, struct timeval *time_recv, int timedelta){
 int len,icmplen,datalen;
 char buf[1024];
 char abuf[100];
 const char *name;
 struct sockaddr_in6 from;
 struct icmp6_hdr *icmp;
-struct timeval time_recv;
-struct timeval *time_recvp=NULL;
-#ifdef HAVE_RECVMSG
-char ans_data[4096];
-struct iovec iov;
-struct msghdr msg;
-struct cmsghdr *c;
-reloophack6:
-
-	iov.iov_base=buf;
-	iov.iov_len=1000;
-	msg.msg_name=&from;
-	msg.msg_namelen=sizeof(from);
-	msg.msg_iov=&iov;
-	msg.msg_iovlen=1;
-	msg.msg_control=ans_data;
-	msg.msg_controllen=sizeof(ans_data);
-	len=recvmsg(t->socket, &msg, MSG_DONTWAIT);
-#else
 socklen_t sl;
 reloophack6:
 
 	sl=sizeof(from);
 	len=recvfrom(t->socket,buf,1024,0,(struct sockaddr *)&from,&sl);
-#endif
 	if (len<0){
 		if (errno==EAGAIN) return;
 		myperror("recvfrom");
 		return;
 	}
 	if (len==0) return;
-#if defined(HAVE_RECVMSG) && defined(SO_TIMESTAMP)
-	debug("checking CMSG...");
-	for (c = CMSG_FIRSTHDR(&msg); c; c = CMSG_NXTHDR(&msg, c)) {
-		debug("CMSG level: %i type: %i",c->cmsg_level,c->cmsg_type);
-		if (c->cmsg_level != SOL_SOCKET || c->cmsg_type != SO_TIMESTAMP)
-			continue;
-		if (c->cmsg_len < CMSG_LEN(sizeof(struct timeval)))
-			continue;
-		time_recvp = (struct timeval*)CMSG_DATA(c);
-		debug("Got timestamp from CMSG");
-	}
-#endif
-	if (time_recvp==NULL){
-#ifdef SIOCGSTAMP
-		if (!ioctl(t->socket, SIOCGSTAMP, &time_recv)){
-			debug("Got timestamp from ioctl()");
-		}else
-#endif
-		{
-			gettimeofday(&time_recv,NULL);
-			debug("Got timestamp from gettimeofday()");
-		}
-		time_recvp=&time_recv;
-	}
 	icmplen=len;
 	icmp=(struct icmp6_hdr *)buf;
 	if (icmp->icmp6_type != ICMP6_ECHO_REPLY) return;
@@ -192,18 +156,16 @@ reloophack6:
 		goto reloophack6;
 		return;	
 	}
+#if 0
 	name=inet_ntop(AF_INET6,&from.sin6_addr,abuf,100);
 	debug("Ping reply from %s",name);
+#endif
 	datalen=icmplen-sizeof(*icmp);
 	if (datalen!=sizeof(struct trace_info)){
 		debug("Packet data truncated.");
 		return;
 	}
-#ifdef FORKED_RECEIVER
-	pipe_reply(*time_recvp,icmp->icmp6_seq,(struct trace_info*)(icmp+1));
-#else
-	analyze_reply(*time_recvp,icmp->icmp6_seq,(struct trace_info*)(icmp+1));
-#endif
+	analyze_reply(time_recv,icmp->icmp6_seq,(struct trace_info*)(icmp+1), timedelta);
 }
 
 
@@ -212,22 +174,16 @@ int opt;
 
 	t->socket = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	if (t->socket <0)
-		myperror("socket");
+		logit("Could not create socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
 	else {
 		opt=2;
 #if defined(SOL_RAW) && defined(IPV6_CHECKSUM)
 		if (setsockopt(t->socket, SOL_RAW, IPV6_CHECKSUM, &opt, sizeof(int)))
 			myperror("setsockopt(IPV6_CHECKSUM)");
 #endif
-#ifdef SO_TIMESTAMP
-		opt=1;
-		if (setsockopt(t->socket, SOL_SOCKET, SO_TIMESTAMP, &opt, sizeof(opt)))
-			myperror("setsockopt(SO_TIMESTAMP)");
-#endif
-		/*install_filter6();*/
+		if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr6, sizeof(t->ifaddr.addr6)) < 0)
+			logit("Could not bind socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
 	}
-	if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr6, sizeof(t->ifaddr.addr6)) < 0)
-		myperror("bind socket");
 
 	return t->socket;
 }

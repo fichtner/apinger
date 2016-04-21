@@ -86,8 +86,9 @@ int ret;
 	va_start(args, format);
 	if (foreground && config->debug){
 		vfprintf(stderr, format, args);
-	}
-	ret=vfprintf(rrdtool_pipe,format,args);
+		ret = 1;
+	} else
+		ret=vfprintf(rrdtool_pipe,format,args);
 	va_end(args);
 	return ret;
 }

@@ -40,7 +40,7 @@ void *pool_malloc(struct pool_item **pool,size_t size){
 struct pool_item *pi;
 char *p;
 
-	p=(char *)malloc(size+sizeof(struct pool_item));
+	p=(char *)calloc(1,size+sizeof(struct pool_item));
 	assert(p!=NULL);
 	pi=(struct pool_item *)p;
 	p+=sizeof(struct pool_item);
@@ -195,6 +195,8 @@ int ret;
 			}
 		}
 		if (config!=NULL){
+			configure_targets(&cur_config, 1);
+
 			struct pool_item *pool=config->pool;
 			pool_clear(&pool);
 			config=NULL;

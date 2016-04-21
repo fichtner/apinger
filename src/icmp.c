@@ -154,67 +154,34 @@ int ret;
 			(struct sockaddr *)&t->addr.addr4,sizeof(t->addr.addr4));
 	if (ret<0){
 		if (config->debug) myperror("sendto");
+		switch (errno) {
+		case EBADF:
+		case ENOTSOCK:
+			if (t->socket)
+				close(t->socket);
+			make_icmp_socket(t);
+			break;
+		}
 	}
 }
 
-void recv_icmp(struct target *t){
+void recv_icmp(struct target *t, struct timeval *time_recv, int timedelta){
 int len,hlen,icmplen,datalen;
 char buf[1024];
 struct sockaddr_in from;
 struct icmp *icmp;
 struct ip *ip;
-struct timeval time_recv;
-struct timeval *time_recvp=NULL;
-#ifdef HAVE_RECVMSG
-char ans_data[4096];
-struct iovec iov;
-struct msghdr msg;
-struct cmsghdr *c;
-reloophack:
-
-	iov.iov_base=buf;
-	iov.iov_len=1000;
-	msg.msg_name=&from;
-	msg.msg_namelen=sizeof(from);
-	msg.msg_iov=&iov;
-	msg.msg_iovlen=1;
-	msg.msg_control=ans_data;
-	msg.msg_controllen=sizeof(ans_data);
-	len=recvmsg(t->socket, &msg, MSG_DONTWAIT);
-#else
 socklen_t sl;
 reloophack:
 
 	sl=sizeof(from);
 	len=recvfrom(t->socket,buf,1024,MSG_DONTWAIT,(struct sockaddr *)&from,&sl);
-#endif
 	if (len<0){
 		if (errno==EAGAIN) return;
 		myperror("recvfrom");
 		return;
 	}
 	if (len==0) return;
-#if defined(HAVE_RECVMSG) && defined(SO_TIMESTAMP)
-	debug("checking CMSG...");
-	for (c = CMSG_FIRSTHDR(&msg); c; c = CMSG_NXTHDR(&msg, c)) {
-		debug("CMSG level: %i type: %i",c->cmsg_level,c->cmsg_type);
-		if (c->cmsg_level != SOL_SOCKET || c->cmsg_type != SCM_TIMESTAMP)
-			continue;
-		if (c->cmsg_len < CMSG_LEN(sizeof(struct timeval)))
-			continue;
-		time_recvp = (struct timeval*)CMSG_DATA(c);
-		debug("Got timestampt from CMSG");
-	}
-#endif
-	if (time_recvp==NULL){
-#ifdef SIOCGSTAMP
-		if (!ioctl(t->socket, SIOCGSTAMP, &time_recv)){
-			debug("Got timestampt from ioctl()");
-		}else
-#endif
-			gettimeofday(&time_recv,NULL);
-		time_recvp=&time_recv;
-	}
 	ip=(struct ip *)buf;
 	hlen=ip->ip_hl*4;
 	if (len<hlen+8 || ip->ip_hl<5) {
@@ -232,17 +199,15 @@ reloophack:
 		goto reloophack;	
 		return;
 	}
+#if 0
 	debug("Ping reply from %s",inet_ntoa(from.sin_addr));
+#endif
 	datalen=icmplen-sizeof(*icmp);
 	if (datalen!=sizeof(struct trace_info)){
 		debug("Packet data truncated.");
 		return;
 	}
-#ifdef FORKED_RECEIVER
-	pipe_reply(*time_recvp,icmp->icmp_seq,(struct trace_info*)(icmp+1));
-#else
-	analyze_reply(*time_recvp,icmp->icmp_seq,(struct trace_info*)(icmp+1));
-#endif
+	analyze_reply(time_recv,icmp->icmp_seq,(struct trace_info*)(icmp+1), timedelta);
 }
 
 int make_icmp_socket(struct target *t){
@@ -250,17 +215,9 @@ int on;
 
 	t->socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (t->socket < 0)
-		myperror("socket");
-#ifdef SO_TIMESTAMP
-	else {
-		on=1;
-		if (setsockopt(t->socket, SOL_SOCKET, SO_TIMESTAMP, &on, sizeof(on)))
-			myperror("setsockopt(SO_TIMESTAMP)");
-	}
-#endif
-
-	if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr4, sizeof(t->ifaddr.addr4)) < 0)
-			myperror("bind socket");
+		logit("Could not create socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
+	else if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr4, sizeof(t->ifaddr.addr4)) < 0)
+		logit("Could not bind socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
 
 	return t->socket;
 }

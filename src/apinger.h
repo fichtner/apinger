@@ -57,7 +57,6 @@ union addr {
 struct active_alarm_list {
 	struct alarm_cfg *alarm;
 	struct active_alarm_list *next;
-	char *msgid;
 	int num_repeats;
 	struct timeval next_repeat;
 };
@@ -127,17 +126,14 @@ extern uint16_t ident;
 extern struct timeval next_probe;
 
 int make_icmp_socket(struct target *t);
-void recv_icmp(struct target *t);
+void recv_icmp(struct target *t, struct timeval *, int);
 void send_icmp_probe(struct target *t,int seq);
 
 int make_icmp6_socket(struct target *t);
-void recv_icmp6(struct target *t);
+void recv_icmp6(struct target *t, struct timeval *, int);
 void send_icmp6_probe(struct target *t,int seq);
 
-#ifdef FORKED_RECEIVER
-void pipe_reply(struct timeval time_recv,int seq,struct trace_info *ti);
-#endif
-void analyze_reply(struct timeval time_recv,int seq,struct trace_info *ti);
+void analyze_reply(struct timeval *time_recv,int seq,struct trace_info *ti, int);
 void main_loop(void);
 
 const char * subst_macros(const char *string,struct target *t,struct alarm_cfg *a,int on);
@@ -148,6 +144,6 @@ extern volatile int reload_request;
 extern volatile int status_request;
 extern volatile int sigpipe_received;
 
-#define NEW(type,size) ((type *)malloc(sizeof(type)*size))
+#define NEW(type,size) ((type *)calloc(1,sizeof(type)*size))
 
 #endif
