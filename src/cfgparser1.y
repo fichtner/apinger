@@ -98,6 +98,7 @@ struct target_cfg *cur_target;
 %token DESCRIPTION
 %token SRCIP
 %token ALARMS
+%token FORCE_DOWN
 %token INTERVAL
 %token AVG_DELAY_SAMPLES
 %token AVG_LOSS_SAMPLES
@@ -254,6 +255,8 @@ targetcfg: /* */
 		{ cur_target->alarms=$2; }
 	| ALARMS OVERRIDE alarmlist
 		{ cur_target->alarms_override=1; cur_target->alarms=$3; }
+	| FORCE_DOWN boolean
+		{ cur_target->force_down=$2; }
 	| INTERVAL INTEGER
 		{ cur_target->interval=$2; }
 	| INTERVAL TIME

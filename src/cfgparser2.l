@@ -85,6 +85,7 @@ srcip		{ LOC; LOCINC; return SRCIP; }
 down		{ LOC; LOCINC; return DOWN; }
 false		{ LOC; LOCINC; return FALSE; }
 file		{ LOC; LOCINC; return FILE_; }
+force_down	{ LOC; LOCINC; return FORCE_DOWN; }
 group		{ LOC; LOCINC; return GROUP; }
 interval	{ LOC; LOCINC; return INTERVAL; }
 loss		{ LOC; LOCINC; return LOSS; }

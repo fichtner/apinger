@@ -72,6 +72,7 @@ struct target_cfg {
 	char *name;
 	char *description;
 	char *srcip;
+	int force_down;
 	int interval;
 	int avg_delay_samples;
 	int avg_loss_delay_samples;

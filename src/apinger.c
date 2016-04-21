@@ -339,7 +339,7 @@ struct delayed_report *dr,*tdr;
 			logit("alarm canceled (config reload): %s(%s)  *** %s ***",t->description,t->name,a->name);
 	}
 
-	if (on < 0) {
+	if ((on < 0) || (t->config->force_down == 1)) {
 		return;
 	}
 
@@ -783,7 +783,9 @@ char *buf1,*buf2;
 			fprintf(f,"%0.1f%%",AVG_LOSS(t));
 		}
 		fprintf(f, "|");
-		if (t->active_alarms){
+		if (t->config->force_down == 1)
+			fprintf(f,"force_down");
+		else if (t->active_alarms){
 			for(al=t->active_alarms;al;al=al->next){
 				a=al->alarm;
 				fprintf(f,"%s",a->name);

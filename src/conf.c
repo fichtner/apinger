@@ -186,6 +186,8 @@ int ret;
 				t->avg_loss_delay_samples=cur_config.target_defaults.avg_loss_delay_samples;
 			if (t->rrd_filename==NULL)
 				t->rrd_filename=cur_config.target_defaults.rrd_filename;
+			if (t->force_down==NULL)
+				t->force_down=0;
 			for(al=t->alarms;al && al->next;al=al->next);
 			if (t->alarms_override==0){
 				if (al)
