@@ -71,6 +71,7 @@ struct config default_config={
 		{		/* target defaults */
 				"default",	/* name */
 				"",		/* description */
+				"",		/* interface */
 				1000,		/* interval */
 				20,		/* avg_delay_samples */
 				5,		/* avg_loss_delay_samples */
@@ -216,11 +217,13 @@ char *graph_location="/apinger/";
 		}
 	}
 
+#if 0
 	make_icmp_socket();
 	make_icmp6_socket();
 	if (icmp6_sock<0 && icmp_sock<0){
 		return 1;
 	}
+#endif
 
 	pw=getpwnam(config->user);
 	if (!pw) {
@@ -285,9 +288,13 @@ char *graph_location="/apinger/";
 #ifdef FORKED_RECEIVER
 	signal(SIGCHLD,sigchld_handler);
 #endif
+	logit("Starting Alarm Pinger, apinger(%i)", ident);
+
 	main_loop();
+#if 0
 	if (icmp_sock>=0) close(icmp_sock);
 	if (icmp6_sock>=0) close(icmp6_sock);
+#endif
 
 	logit("Exiting on signal %i.",interrupted_by);
 

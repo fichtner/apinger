@@ -96,6 +96,7 @@ struct target_cfg *cur_target;
 %token DELAY_HIGH
 
 %token DESCRIPTION
+%token SRCIP
 %token ALARMS
 %token INTERVAL
 %token AVG_DELAY_SAMPLES
@@ -247,6 +248,8 @@ target:	TARGET getdeftarget DEFAULT '{' targetcfg '}'
 targetcfg: /* */ 
 	| DESCRIPTION string 
 		{ cur_target->description=$2; }
+	| SRCIP string 
+		{ cur_target->srcip = $2; }
 	| ALARMS alarmlist
 		{ cur_target->alarms=$2; }
 	| ALARMS OVERRIDE alarmlist

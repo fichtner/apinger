@@ -46,6 +46,8 @@
 #endif
 #include "conf.h"
 
+#include <ifaddrs.h>
+
 union addr {
 	struct sockaddr addr;
 	struct sockaddr_in addr4;
@@ -66,10 +68,11 @@ struct target {
 	char *description;	/* description */
 	
 	union addr addr;	/* target address */
-	
+
 	char *queue;		/*
 				contains info about recently sent packets
 				"1" means it was received */
+	int socket;
 	int last_sent;		/* sequence number of the last ping sent */
 	int last_received;	/* sequence number of the last ping received */
 	struct timeval last_received_tv; /* timestamp of the last ping received */
@@ -89,6 +92,7 @@ struct target {
 	struct target_cfg *config;
 	
 	struct target *next;
+	union addr ifaddr;	/* iface address */
 };
 
 #define AVG_DELAY_KNOWN(t) (t->upsent >= t->config->avg_delay_samples)
@@ -122,8 +126,8 @@ extern uint16_t ident;
 
 extern struct timeval next_probe;
 
-int make_icmp_socket(void);
-void recv_icmp(void);
+int make_icmp_socket(struct target *t);
+void recv_icmp(struct target *t);
 void send_icmp_probe(struct target *t,int seq);
 
 int make_icmp6_socket(void);

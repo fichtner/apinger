@@ -81,6 +81,7 @@ delay		{ LOC; LOCINC; return DELAY; }
 delay_high	{ LOC; LOCINC; return DELAY_HIGH; }
 delay_low	{ LOC; LOCINC; return DELAY_LOW; }
 description	{ LOC; LOCINC; return DESCRIPTION; }
+srcip		{ LOC; LOCINC; return SRCIP; }
 down		{ LOC; LOCINC; return DOWN; }
 false		{ LOC; LOCINC; return FALSE; }
 file		{ LOC; LOCINC; return FILE_; }

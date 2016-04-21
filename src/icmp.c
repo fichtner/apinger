@@ -150,14 +150,14 @@ int ret;
 	size=sizeof(*p)+sizeof(ti);
 
 	p->icmp_cksum = in_cksum((u_short *)p,size,0);
-	ret=sendto(icmp_sock,p,size,MSG_DONTWAIT,
+	ret=sendto(t->socket,p,size,MSG_DONTWAIT,
 			(struct sockaddr *)&t->addr.addr4,sizeof(t->addr.addr4));
 	if (ret<0){
 		if (config->debug) myperror("sendto");
 	}
 }
 
-void recv_icmp(void){
+void recv_icmp(struct target *t){
 int len,hlen,icmplen,datalen;
 char buf[1024];
 struct sockaddr_in from;
@@ -170,6 +170,7 @@ char ans_data[4096];
 struct iovec iov;
 struct msghdr msg;
 struct cmsghdr *c;
+reloophack:
 
 	iov.iov_base=buf;
 	iov.iov_len=1000;
@@ -179,12 +180,13 @@ struct cmsghdr *c;
 	msg.msg_iovlen=1;
 	msg.msg_control=ans_data;
 	msg.msg_controllen=sizeof(ans_data);
-	len=recvmsg(icmp_sock, &msg, MSG_DONTWAIT);
+	len=recvmsg(t->socket, &msg, MSG_DONTWAIT);
 #else
 socklen_t sl;
+reloophack:
 
 	sl=sizeof(from);
-	len=recvfrom(icmp_sock,buf,1024,MSG_DONTWAIT,(struct sockaddr *)&from,&sl);
+	len=recvfrom(t->socket,buf,1024,MSG_DONTWAIT,(struct sockaddr *)&from,&sl);
 #endif
 	if (len<0){
 		if (errno==EAGAIN) return;
@@ -206,7 +208,7 @@ socklen_t sl;
 #endif
 	if (time_recvp==NULL){
 #ifdef SIOCGSTAMP
-		if (!ioctl(icmp_sock, SIOCGSTAMP, &time_recv)){
+		if (!ioctl(t->socket, SIOCGSTAMP, &time_recv)){
 			debug("Got timestampt from ioctl()");
 		}else
 #endif
@@ -226,7 +228,8 @@ socklen_t sl;
 		return;
 	}
 	if (icmp->icmp_id != ident){
-		debug("Alien echo-reply received");
+		debug("Alien echo-reply received from %s. Expected %i, received %i",inet_ntoa(from.sin_addr), ident, icmp->icmp_id);
+		goto reloophack;	
 		return;
 	}
 	debug("Ping reply from %s",inet_ntoa(from.sin_addr));
@@ -242,19 +245,23 @@ socklen_t sl;
 #endif
 }
 
-int make_icmp_socket(void){
+int make_icmp_socket(struct target *t){
 int on;
 
-	icmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	if (icmp_sock<0)
+	t->socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	if (t->socket < 0)
 		myperror("socket");
 #ifdef SO_TIMESTAMP
-	else{
+	else {
 		on=1;
-		if (setsockopt(icmp_sock, SOL_SOCKET, SO_TIMESTAMP, &on, sizeof(on)))
+		if (setsockopt(t->socket, SOL_SOCKET, SO_TIMESTAMP, &on, sizeof(on)))
 			myperror("setsockopt(SO_TIMESTAMP)");
 	}
 #endif
-	return icmp_sock;
+
+	if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr4, sizeof(t->ifaddr.addr4)) < 0)
+			myperror("bind socket");
+
+	return t->socket;
 }
 
