@@ -520,8 +520,8 @@ struct alarm_cfg *a;
 	}
 }
 
-void
-configure_targets(struct config *cfg, int reload)
+int
+configure_targets(struct config *cfg)
 {
 	struct target *t,*pt,*nt;
 	struct target_cfg *tc;
@@ -729,13 +729,18 @@ configure_targets(struct config *cfg, int reload)
 		t->config=tc;
 	}
 
-	if (targets==NULL){
-		logit("No usable targets found, exiting");
-		exit(1);
+	if (!targets) {
+		logit("No usable targets found, sleeping...");
+		return (1);
 	}
-	gettimeofday(&operation_started,NULL);
-	if (cfg->rrd_interval)
+
+	gettimeofday(&operation_started, NULL);
+
+	if (cfg->rrd_interval) {
 		rrd_create();
+	}
+
+	return (0);
 }
 
 void
@@ -862,18 +867,22 @@ main_loop(void)
 	struct timeval event_time, cur_time, tv;
 	struct timeval next_status = { 0, 0 };
 	struct timeval next_report = { 0, 0 };
-	struct target *t;
+	struct active_alarm_list *aal;
+	struct alarm_list *al, *nal;
 	struct pollfd pfd[1024];
 	int timeout, timedelta;
-	int npfd = 0;
-	int i;
-	char buf[100];
-	int downtime;
-	struct alarm_list *al,*nal;
-	struct active_alarm_list *aal;
 	struct alarm_cfg *a;
+	struct target *t;
+	char buf[100];
+	int npfd = 0;
+	int downtime;
+	int i;
 
-	configure_targets(config, 0);
+	while (configure_targets(config)) {
+		/* retry every minute, beats exit() */
+		sleep(60);
+	}
+
 	memset(&pfd, '\0', sizeof pfd);
 
 	if (config->status_interval) {

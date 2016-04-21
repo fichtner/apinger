@@ -197,7 +197,7 @@ int ret;
 			}
 		}
 		if (config!=NULL){
-			configure_targets(&cur_config, 1);
+			configure_targets(&cur_config);
 
 			struct pool_item *pool=config->pool;
 			pool_clear(&pool);
@@ -211,9 +211,10 @@ int ret;
 	return ret;
 }
 
-void free_config(void){
-struct pool_item *pool;
+void
+free_config(void)
+{
+	struct pool_item *pool = config->pool;
 
-	pool=config->pool;
 	pool_clear(&pool);
 }
