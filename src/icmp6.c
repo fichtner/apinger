@@ -25,6 +25,9 @@
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>
 #endif
+#ifdef HAVE_STRING_H
+# include <string.h>
+#endif
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
@@ -112,14 +115,14 @@ int ret;
 	memcpy(p+1,&ti,sizeof(ti));
 	size=sizeof(*p)+sizeof(ti);
 
-	ret=sendto(icmp6_sock,p,size,MSG_DONTWAIT,
+	ret=sendto(t->socket,p,size,MSG_DONTWAIT,
 			(struct sockaddr *)&t->addr.addr6,sizeof(t->addr.addr6));
 	if (ret<0){
 		if (config->debug) myperror("sendto");
 	}
 }
 
-void recv_icmp6(void){
+void recv_icmp6(struct target *t){
 int len,icmplen,datalen;
 char buf[1024];
 char abuf[100];
@@ -133,6 +136,7 @@ char ans_data[4096];
 struct iovec iov;
 struct msghdr msg;
 struct cmsghdr *c;
+reloophack6:
 
 	iov.iov_base=buf;
 	iov.iov_len=1000;
@@ -142,12 +146,13 @@ struct cmsghdr *c;
 	msg.msg_iovlen=1;
 	msg.msg_control=ans_data;
 	msg.msg_controllen=sizeof(ans_data);
-	len=recvmsg(icmp6_sock, &msg, MSG_DONTWAIT);
+	len=recvmsg(t->socket, &msg, MSG_DONTWAIT);
 #else
 socklen_t sl;
+reloophack6:
 
 	sl=sizeof(from);
-	len=recvfrom(icmp6_sock,buf,1024,0,(struct sockaddr *)&from,&sl);
+	len=recvfrom(t->socket,buf,1024,0,(struct sockaddr *)&from,&sl);
 #endif
 	if (len<0){
 		if (errno==EAGAIN) return;
@@ -169,7 +174,7 @@ socklen_t sl;
 #endif
 	if (time_recvp==NULL){
 #ifdef SIOCGSTAMP
-		if (!ioctl(icmp6_sock, SIOCGSTAMP, &time_recv)){
+		if (!ioctl(t->socket, SIOCGSTAMP, &time_recv)){
 			debug("Got timestamp from ioctl()");
 		}else
 #endif
@@ -182,8 +187,11 @@ socklen_t sl;
 	icmplen=len;
 	icmp=(struct icmp6_hdr *)buf;
 	if (icmp->icmp6_type != ICMP6_ECHO_REPLY) return;
-	if (icmp->icmp6_id != ident) return;
-
+	if (icmp->icmp6_id != ident){
+		debug("Alien echo-reply received from xxx. Expected %i, received %i", ident, icmp->icmp6_id);
+		goto reloophack6;
+		return;	
+	}
 	name=inet_ntop(AF_INET6,&from.sin6_addr,abuf,100);
 	debug("Ping reply from %s",name);
 	datalen=icmplen-sizeof(*icmp);
@@ -199,33 +207,36 @@ socklen_t sl;
 }
 
 
-int make_icmp6_socket(void){
+int make_icmp6_socket(struct target *t){
 int opt;
 
-	icmp6_sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-	if (icmp6_sock<0)
+	t->socket = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	if (t->socket <0)
 		myperror("socket");
 	else {
 		opt=2;
 #if defined(SOL_RAW) && defined(IPV6_CHECKSUM)
-		if (setsockopt(icmp6_sock, SOL_RAW, IPV6_CHECKSUM, &opt, sizeof(int)))
+		if (setsockopt(t->socket, SOL_RAW, IPV6_CHECKSUM, &opt, sizeof(int)))
 			myperror("setsockopt(IPV6_CHECKSUM)");
 #endif
 #ifdef SO_TIMESTAMP
 		opt=1;
-		if (setsockopt(icmp6_sock, SOL_SOCKET, SO_TIMESTAMP, &opt, sizeof(opt)))
+		if (setsockopt(t->socket, SOL_SOCKET, SO_TIMESTAMP, &opt, sizeof(opt)))
 			myperror("setsockopt(SO_TIMESTAMP)");
 #endif
 		/*install_filter6();*/
 	}
-	return icmp6_sock;
+	if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr6, sizeof(t->ifaddr.addr6)) < 0)
+		myperror("bind socket");
+
+	return t->socket;
 }
 
 #else /*HAVE_IPV6*/
 #include "apinger.h"
 
-int make_icmp6_socket(void){ return -1; }
-void recv_icmp6(void){}
+int make_icmp6_socket(struct target *t){ return -1; }
+void recv_icmp6(struct target *t){}
 void send_icmp6_probe(struct target *t,int seq){}
 
 #endif /*HAVE_IPV6*/

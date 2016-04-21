@@ -701,9 +701,23 @@ int l;
 			r=inet_pton(AF_INET,tc->srcip,&srcaddr.addr4.sin_addr);
 			if (r){
 				srcaddr.addr.sa_family=AF_INET;
-			} else {
-				logit("Bad srcip address %s for target %s\n", tc->srcip, tc->name);
-				continue; 
+			}else{
+#ifdef HAVE_IPV6
+				r=inet_pton(AF_INET6,tc->srcip,&srcaddr.addr6.sin6_addr);
+				if (r==0){
+#endif
+					logit("Bad srcip address %s for target %s\n", tc->srcip, tc->name);
+					logit("Ignoring target %s\n",tc->name);
+					continue;
+#ifdef HAVE_IPV6
+				}
+				if (icmp6_sock<0){
+					logit("Sorry, IPv6 is not available\n");
+					logit("Ignoring target %s\n",tc->name);
+					continue;
+				}
+				srcaddr.addr.sa_family=AF_INET6;
+#endif
 			}
 			t=NEW(struct target,1);
 			memset(t,0,sizeof(struct target));
@@ -712,7 +726,8 @@ int l;
 			t->addr=addr;
 			t->ifaddr=srcaddr;
 			t->next=targets;
-			make_icmp_socket(t);
+			if(t->addr.addr.sa_family==AF_INET) make_icmp_socket(t);
+			if(t->addr.addr.sa_family==AF_INET6) make_icmp6_socket(t);
 			targets=t;
 		}
 		t->config=tc;
@@ -971,9 +986,17 @@ struct alarm_cfg *a;
 		for(i=0;i<npfd;i++){
 			if (!pfd[i].revents&POLLIN) continue;
 			for(t=targets;t;t=t->next){
-				if (t->socket == pfd[i].fd) {
-					recv_icmp(t);
-					break;
+				if (t->addr.addr.sa_family==AF_INET) {
+					if (t->socket == pfd[i].fd) {
+						recv_icmp(t);
+						break;
+					}
+				}
+				if (t->addr.addr.sa_family==AF_INET6) {
+					if (t->socket == pfd[i].fd) {
+						recv_icmp6(t);
+						break;
+					}
 				}
 			}
 			pfd[i].revents=0;

@@ -130,8 +130,8 @@ int make_icmp_socket(struct target *t);
 void recv_icmp(struct target *t);
 void send_icmp_probe(struct target *t,int seq);
 
-int make_icmp6_socket(void);
-void recv_icmp6(void);
+int make_icmp6_socket(struct target *t);
+void recv_icmp6(struct target *t);
 void send_icmp6_probe(struct target *t,int seq);
 
 #ifdef FORKED_RECEIVER
