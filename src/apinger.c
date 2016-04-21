@@ -804,7 +804,6 @@ struct alarm_cfg *a;
 time_t tm;
 int i,qp,really_lost;
 char *buf1,*buf2;
-int err=0;
 
 	if (config->status_file==NULL) return;
 	
@@ -866,7 +865,7 @@ int err=0;
 		if (t->recently_lost!=really_lost){
 			logit("Target \"%s\": Lost packet count mismatch (%i(recently_lost) != %i(really_lost))!",t->name,t->recently_lost,really_lost);
 			logit("Target \"%s\": Received packets buffer: %s %s\n",t->name,buf2,buf1);
-			err=1;
+			//t->recently_lost = really_lost = 0;
 		}
 		free(buf1);
 		free(buf2);
@@ -874,7 +873,6 @@ int err=0;
 		fprintf(f,"\n");
 	}
 	fclose(f);
-	if (err) abort();
 }
 
 void main_loop(void){
