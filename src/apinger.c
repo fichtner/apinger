@@ -520,22 +520,25 @@ struct alarm_cfg *a;
 	}
 }
 
-void configure_targets(struct config *cfg, int reload){
-struct target *t,*pt,*nt;
-struct target_cfg *tc;
-struct delayed_report *dr, *pdr, *ndr;
-struct active_alarm_list *aal,*naal;
-struct alarm_cfg *a, *na;
-union addr addr, srcaddr;
+void
+configure_targets(struct config *cfg, int reload)
+{
+	struct target *t,*pt,*nt;
+	struct target_cfg *tc;
+	struct delayed_report *dr, *pdr, *ndr;
+	struct active_alarm_list *aal,*naal;
+	struct alarm_cfg *a, *na;
+	union addr addr, srcaddr;
 #ifdef HAVE_IPV6
-struct addrinfo hints, *res;
+	struct addrinfo hints, *res;
 #endif
-int r;
-int l;
+	int r;
+	int l;
 
-	/* delete all not configured targets */
-	pt=NULL;
-	for(t=targets;t;t=nt){
+	/* delete all unconfigured targets */
+	pt = NULL;
+
+	for (t = targets; t; t = nt) {
 		for(tc=cfg->targets;tc;tc=tc->next) {
 			if (strlen(tc->srcip) != strlen(t->config->srcip) || strcmp(tc->srcip, t->config->srcip))
 				continue;
@@ -735,19 +738,22 @@ int l;
 		rrd_create();
 }
 
-void free_targets(void){
-struct target *t,*nt;
-struct active_alarm_list *al,*nal;
+void
+free_targets(void)
+{
+	struct active_alarm_list *al, *nal;
+	struct target *t, *nt;
 
-	/* delete all not configured targets */
-	for(t=targets;t;t=nt){
-		nt=t->next;
-		for(al=t->active_alarms;al;al=nal){
-			nal=al->next;
+	/* delete all unconfigured targets */
+	for (t = targets; t; t = nt) {
+		nt = t->next;
+		for (al = t->active_alarms; al; al = nal) {
+			nal = al->next;
 			free(al);
 		}
-		if (t->socket)
+		if (t->socket) {
 			close(t->socket);
+		}
 		free(t->queue);
 		free(t->rbuf);
 		free(t->name);
@@ -756,10 +762,12 @@ struct active_alarm_list *al,*nal;
 	}
 }
 
-
-void reload_config(void){
-	if (load_config(config_file))
-                logit("Couldn't read config (\"%s\").",config_file);
+void
+reload_config(void)
+{
+	if (load_config(config_file)) {
+                logit("Couldn't read config (\"%s\").", config_file);
+	}
 }
 
 void write_status(void){
@@ -847,113 +855,150 @@ char *buf1,*buf2;
 	fclose(f);
 }
 
-void main_loop(void){
-struct target *t;
-struct timeval cur_time,next_status={0,0},tv,next_report={0,0},next_rrd_update={0,0}, event_time;
-struct pollfd pfd[1024];
-int timeout, timedelta;
-int npfd=0;
-int i;
-char buf[100];
-int downtime;
-struct alarm_list *al,*nal;
-struct active_alarm_list *aal;
-struct alarm_cfg *a;
+void
+main_loop(void)
+{
+	struct timeval next_rrd_update = { 0, 0 };
+	struct timeval event_time, cur_time, tv;
+	struct timeval next_status = { 0, 0 };
+	struct timeval next_report = { 0, 0 };
+	struct target *t;
+	struct pollfd pfd[1024];
+	int timeout, timedelta;
+	int npfd = 0;
+	int i;
+	char buf[100];
+	int downtime;
+	struct alarm_list *al,*nal;
+	struct active_alarm_list *aal;
+	struct alarm_cfg *a;
 
 	configure_targets(config, 0);
 	memset(&pfd, '\0', sizeof pfd);
 
-	if (config->status_interval){
-		gettimeofday(&cur_time,NULL);
-		tv.tv_sec=config->status_interval/1000;
-		tv.tv_usec=(config->status_interval%1000)*1000;
-		timeradd(&cur_time,&tv,&next_status);
+	if (config->status_interval) {
+		gettimeofday(&cur_time, NULL);
+		tv.tv_sec=config->status_interval / 1000;
+		tv.tv_usec=(config->status_interval % 1000) * 1000;
+		timeradd(&cur_time, &tv, &next_status);
 	}
-	while(!interrupted_by){
+
+	while (!interrupted_by) {
 		npfd = 0;
-		gettimeofday(&cur_time,NULL);
-		if ( !timercmp(&next_probe,&cur_time,>) )
+
+		gettimeofday(&cur_time, NULL);
+		if (!timercmp(&next_probe, &cur_time, >)) {
 			timerclear(&next_probe);
-		for(t=targets;t;t=t->next){
+		}
+
+		for (t = targets; t; t = t->next) {
 			if (t->socket){
-				pfd[npfd].events=POLLIN|POLLERR|POLLHUP|POLLNVAL;
-				pfd[npfd].revents=0;
-				pfd[npfd++].fd=t->socket;
+				pfd[npfd].events =
+				    POLLIN|POLLERR|POLLHUP|POLLNVAL;
+				pfd[npfd].revents = 0;
+				pfd[npfd++].fd = t->socket;
 			}
-			for(al=t->config->alarms;al;al=nal){
-				a=al->alarm;
-				nal=al->next;
-				if (a->type!=AL_DOWN || is_alarm_on(t,a)) continue;
-				if (timerisset(&t->last_received_tv)){
-					timersub(&cur_time,&t->last_received_tv,&tv);
+
+			for (al = t->config->alarms; al ; al = nal) {
+				a = al->alarm;
+				nal = al->next;
+				if (a->type != AL_DOWN || is_alarm_on(t, a)) {
+					continue;
 				}
-				else {
-					timersub(&cur_time,&operation_started,&tv);
+				if (timerisset(&t->last_received_tv)) {
+					timersub(&cur_time,
+					    &t->last_received_tv, &tv);
+				} else {
+					timersub(&cur_time,
+					    &operation_started, &tv);
 				}
-				downtime=tv.tv_sec*1000+tv.tv_usec/1000;
-				if (timedelta > 0)
+				downtime = (tv.tv_sec * 1000) +
+				    (tv.tv_usec / 1000);
+				if (timedelta > 0) {
 					downtime -= timedelta;
-				if ( downtime > a->p.val)
-					toggle_alarm(t,a,1);
+				}
+				if (downtime > a->p.val) {
+					toggle_alarm(t, a, 1);
+				}
 			}
-			if (scheduled_event(&(t->next_probe),&cur_time,t->config->interval)){
+			if (scheduled_event(&t->next_probe, &cur_time,
+			    t->config->interval)) {
 				send_probe(t);
 			}
 		}
-		gettimeofday(&event_time,NULL);
-		if (reload_request){
-			reload_request=0;
+
+		gettimeofday(&event_time, NULL);
+		if (reload_request) {
+			reload_request = 0;
 			logit("SIGHUP received, reloading configuration.");
 			reload_config();
 			signal(SIGHUP, signal_handler);
 		}
-		for(t=targets;t;t=t->next){
-			for(aal=t->active_alarms;aal;aal=aal->next){
-				a=aal->alarm;
-				if (a->repeat_interval<=0)
+
+		for (t = targets; t; t = t->next) {
+			for (aal = t->active_alarms; aal; aal = aal->next) {
+				a = aal->alarm;
+				if (a->repeat_interval <= 0) {
 					continue;
-				if (!scheduled_event(&aal->next_repeat,&cur_time,a->repeat_interval))
+				}
+				if (!scheduled_event(&aal->next_repeat,
+				    &cur_time, a->repeat_interval)) {
 					continue;
-				if (a->repeat_max && aal->num_repeats>=a->repeat_max)
+				}
+				if (a->repeat_max &&
+				    aal->num_repeats >= a->repeat_max) {
 					continue;
+				}
 				aal->num_repeats++;
 				debug("Repeating reports...");
 				make_reports(t, a, 1);
 			}
 		}
-		if (config->status_interval){
-			if (scheduled_event(&next_status,&cur_time,config->status_interval)){
-				if (config->status_file) write_status();
-				status_request=0;
+
+		if (config->status_interval) {
+			if (scheduled_event(&next_status, &cur_time,
+			    config->status_interval)) {
+				if (config->status_file) {
+					write_status();
+				}
+				status_request = 0;
 			}
 		}
-		if (status_request){
-			status_request=0;
-			if (config->status_file){
+
+		if (status_request) {
+			status_request = 0;
+			if (config->status_file) {
 				debug("SIGUSR1 received, writing status.");
 				write_status();
 			}
 			signal(SIGUSR1, signal_handler);
 		}
-		if (config->rrd_interval){
-			if (scheduled_event(&next_rrd_update,&cur_time,config->rrd_interval)){
+
+		if (config->rrd_interval) {
+			if (scheduled_event(&next_rrd_update, &cur_time,
+			    config->rrd_interval)) {
 				rrd_update();
 			}
 		}
-		if (delayed_reports){
-			if (timerisset(&next_report) && timercmp(&next_report,&cur_time,<)){
+
+		if (delayed_reports) {
+			if (timerisset(&next_report) &&
+			    timercmp(&next_report, &cur_time, <)) {
 				make_delayed_reports();
 				timerclear(&next_report);
 			}
 		}
-		if (delayed_reports){
-			if (!timerisset(&next_report)){
-				tv.tv_sec=delayed_reports->a->combine_interval/1000;
-				tv.tv_usec=(delayed_reports->a->combine_interval%1000)*1000;
-				timeradd(&delayed_reports->timestamp,&tv,&next_report);
+		if (delayed_reports) { /* XXX merge? */
+			if (!timerisset(&next_report)) {
+				tv.tv_sec = delayed_reports->a->combine_interval / 1000;
+				tv.tv_usec = (delayed_reports->a->combine_interval % 1000) * 1000;
+				timeradd(&delayed_reports->timestamp,
+				    &tv, &next_report);
 			}
-			if (!timerisset(&next_probe) || timercmp(&next_report,&next_probe,<))
-				next_probe=next_report;
+			if (!timerisset(&next_probe) ||
+			    timercmp(&next_report, &next_probe , <)) {
+				next_probe = next_report;
+			}
 		}
 
 #if 0
@@ -961,45 +1006,55 @@ struct alarm_cfg *a;
 		debug("Next event scheduled for %s",buf);
 #endif
 
-		gettimeofday(&cur_time,NULL);
-		if (timercmp(&cur_time,&event_time,<)){
-			timedelta=0;
+		gettimeofday(&cur_time, NULL);
+		if (timercmp(&cur_time, &event_time, <)) {
+			timedelta = 0;
+		} else {
+			timersub(&cur_time, &event_time, &tv);
+			timedelta = (tv.tv_usec / 1000) + (tv.tv_sec * 1000);
 		}
-		else{
-			timersub(&cur_time,&event_time,&tv);
-			timedelta=tv.tv_usec/1000+tv.tv_sec*1000;
+		if (timercmp(&next_probe, &cur_time, <)) {
+			timeout = 0;
+		} else{
+			timersub(&next_probe, &cur_time, &tv);
+			timeout = (tv.tv_usec / 1000) + (tv.tv_sec * 1000);
 		}
-		if (timercmp(&next_probe,&cur_time,<)){
-			timeout=0;
-		}
-		else{
-			timersub(&next_probe,&cur_time,&tv);
-			timeout=tv.tv_usec/1000+tv.tv_sec*1000;
-		}
-		debug("Polling, timeout: %5.3fs",((double)timeout)/1000);
-		if (poll(pfd,npfd,timeout) < 0)
+		debug("Polling, timeout: %5.3fs", ((double)timeout) / 1000);
+		if (poll(pfd, npfd, timeout) < 0) {
 			continue;
-		gettimeofday(&cur_time,NULL);
-		for(i=0;i<npfd;i++){
-			if (!pfd[i].revents&POLLIN) continue;
-			for(t=targets;t;t=t->next){
-				if (t->addr.addr.sa_family==AF_INET) {
+		}
+		gettimeofday(&cur_time, NULL);
+
+		for (i = 0; i < npfd; i++) {
+			if (!(pfd[i].revents & POLLIN)) {
+				continue;
+			}
+
+			for (t = targets; t; t = t->next) {
+				if (t->addr.addr.sa_family == AF_INET) {
 					if (t->socket == pfd[i].fd) {
-						recv_icmp(t, &cur_time, timedelta);
+						recv_icmp(t, &cur_time,
+						    timedelta);
 						break;
 					}
-				}
-				else if (t->addr.addr.sa_family==AF_INET6) {
+				} else if (t->addr.addr.sa_family == AF_INET6) {
 					if (t->socket == pfd[i].fd) {
-						recv_icmp6(t, &cur_time, timedelta);
+						recv_icmp6(t, &cur_time,
+						    timedelta);
 						break;
 					}
 				}
 			}
-			pfd[i].revents=0;
+
+			pfd[i].revents = 0;
 		}
 	}
-	while(delayed_reports!=NULL) make_delayed_reports();
+
+	while (delayed_reports) {
+		make_delayed_reports();
+	}
+
 	free_targets();
-	if (macros_buf!=NULL) free(macros_buf);
+
+	free(macros_buf);
 }

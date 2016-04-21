@@ -298,10 +298,12 @@ char *graph_location="/apinger/";
 
 	logit("Exiting on signal %i.",interrupted_by);
 
-	if (!foreground){
-		/*clear the pid file*/
-		pidfile=fopen(config->pid_file,"w");
-		if (pidfile) fclose(pidfile);
+	if (!foreground) {
+		/* clear the pid file */
+		pidfile = fopen(config->pid_file, "w");
+		if (pidfile) {
+			fclose(pidfile);
+		}
 		/* try to remove it. Most probably this will fail */
 		unlink(config->pid_file);
 	}
