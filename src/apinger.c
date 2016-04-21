@@ -27,6 +27,9 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
@@ -937,6 +940,7 @@ struct alarm_cfg *a;
 			reload_request=0;
 			logit("SIGHUP received, reloading configuration.");
 			reload_config();
+			signal(SIGHUP, signal_handler);
 		}
 		for(t=targets;t;t=t->next){
 			for(aal=t->active_alarms;aal;aal=aal->next){
@@ -969,6 +973,7 @@ struct alarm_cfg *a;
 				logit("SIGUSR1 received, writting status.");
 				write_status();
 			}
+			signal(SIGUSR1, signal_handler);
 		}
 		if (config->rrd_interval){
 			if (scheduled_event(&next_rrd_update,&cur_time,config->rrd_interval)){

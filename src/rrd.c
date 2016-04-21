@@ -29,6 +29,9 @@
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
@@ -135,6 +138,7 @@ int ret;
 		sigpipe_received=0;
 		if (rrdtool_pipe) pclose(rrdtool_pipe);
 		rrdtool_pipe=NULL;
+		signal(SIGPIPE, signal_handler);
 	}
 	for(t=targets;t!=NULL;t=t->next){
 		if (t->config->rrd_filename==NULL) continue;

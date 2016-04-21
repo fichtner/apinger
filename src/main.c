@@ -109,15 +109,15 @@ volatile int sigpipe_received=0;
 void signal_handler(int signum){
 
 	if (signum==SIGPIPE){
-		signal(SIGPIPE,signal_handler);
+		signal(SIGPIPE, SIG_IGN);
 		sigpipe_received=1;
 	}
 	else if (signum==SIGHUP){
-		signal(SIGHUP,signal_handler);
+		signal(SIGHUP, SIG_IGN);
 		reload_request=1;
 	}
 	else if (signum==SIGUSR1){
-		signal(SIGUSR1,signal_handler);
+		signal(SIGUSR1, SIG_IGN);
 		status_request=1;
 	}
 	else{

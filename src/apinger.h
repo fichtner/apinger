@@ -142,6 +142,7 @@ void main_loop(void);
 
 const char * subst_macros(const char *string,struct target *t,struct alarm_cfg *a,int on);
 
+void signal_handler(int);
 extern volatile int interrupted_by;
 extern volatile int reload_request;
 extern volatile int status_request;
