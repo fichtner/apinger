@@ -91,5 +91,5 @@ AC_ARG_WITH(rrdcgi,[AC_HELP_STRING([--with-rrdcgi=path],[Location of rrdcgi prog
 AC_DEFINE_UNQUOTED(RRDTOOL,"$RRDTOOL",[Set to the path of rrdtool program])
 AC_DEFINE_UNQUOTED(RRDCGI,"$RRDCGI",[Set to the path of rrdcgi program])
 
-AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT

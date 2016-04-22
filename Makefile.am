@@ -1,7 +1,6 @@
-
 EXTRA_DIST = autogen.sh TODO BUGS
 
-SUBDIRS = src doc
+SUBDIRS = src
 
 .PHONY: ChangeLog
 
