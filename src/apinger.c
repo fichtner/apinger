@@ -255,7 +255,7 @@ void write_report(FILE *f,struct target *t,struct alarm_cfg *a,int on){
 time_t tm;
 
 	tm=time(NULL);
-	fprintf(f,"%s|%s|%i|%i|%u|",t->name, t->description, t->last_sent+1,
+	fprintf(f,"%s|%s|%i|%i|%ld|",t->name, t->description, t->last_sent+1,
 		t->received, t->last_received_tv.tv_sec);
 	if (AVG_DELAY_KNOWN(t)){
 		fprintf(f,"%4.3fms|",AVG_DELAY(t));
@@ -391,17 +391,23 @@ int ret;
 	return ret;
 }
 
-void send_probe(struct target *t){
-int i,i1;
-char buf[100];
-int seq;
+void
+send_probe(struct target *t)
+{
+	int i, i1, seq;
 
-	seq=++t->last_sent;
+	seq = ++t->last_sent;
 	debug("Sending ping #%i to %s (%s)",seq,t->description,t->name);
+
 #if 0
-	strftime(buf,100,"%b %d %H:%M:%S",localtime(&t->next_probe.tv_sec));
-	debug("Next one scheduled for %s",buf);
+	{
+		char buf[100];
+
+		strftime(buf,100,"%b %d %H:%M:%S",localtime(&t->next_probe.tv_sec));
+		debug("Next one scheduled for %s",buf);
+	}
 #endif
+
 	if (t->addr.addr.sa_family==AF_INET) send_icmp_probe(t,seq);
 #ifdef HAVE_IPV6
 	else if (t->addr.addr.sa_family==AF_INET6) send_icmp6_probe(t,seq);
@@ -796,7 +802,7 @@ char *buf1,*buf2;
 	}
 	tm=time(NULL);
 	for(t=targets;t;t=t->next){
-		fprintf(f,"%s|%s|%s|%i|%i|%u|",t->name, t->config->srcip, t->description, t->last_sent+1,
+		fprintf(f,"%s|%s|%s|%i|%i|%ld|",t->name, t->config->srcip, t->description, t->last_sent+1,
 			t->received, t->last_received_tv.tv_sec);
 		fprintf(f,"%0.3fms|", AVG_DELAY(t));
 		if (AVG_LOSS_KNOWN(t)){
