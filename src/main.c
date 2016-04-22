@@ -47,81 +47,81 @@
 #include "debug.h"
 #include "rrd.h"
 
-/* Global variables */
-struct target *targets=NULL;
-struct config default_config={
-	NULL,NULL,NULL,		/* pool, alarms, targets */
-		{		/* alarm defaults */
-				AL_NONE,	/* type */
-				"default",	/* name */
-				NULL,		/* mailto */
-				"nobody",	/* mailfrom */
-				NULL,		/* mailenvfrom */
-				"%r: %T(%t) *** %a ***", /* mailsubject */
-				NULL,		/* command on */
-				NULL,		/* command off */
-				NULL,		/* pipe on */
-				NULL,		/* pipe off */
-				0,		/* combine_interval */
-				0,		/* repeat_interval */
-				0,		/* repeat_max */
-				{},		/* params */
-				NULL		/* next */
-		},
-		{		/* target defaults */
-				"default",	/* name */
-				"",		/* description */
-				"",		/* interface */
-				1000,		/* interval */
-				20,		/* avg_delay_samples */
-				5,		/* avg_loss_delay_samples */
-				50,		/* avg_loss_samples */
-				NULL,		/* rrd filename */
+struct target *targets = NULL;
 
-				NULL,0,NULL	/* alarms, alarms_override, next */
-		},
-	0,			/* rrd_interval */
-	0,			/* debug */
-	"nobody",		/* user */
-	NULL,			/* group */
-	"/usr/lib/sendmail -t",	/* mailer */
-	"/var/run/apinger.pid", /* pid file */
-	NULL,			/* status file */
-	0,			/* status interval */
-	"%b %d %H:%M:%S"	/* timestamp format */
+struct config default_config = {
+	.timestamp_format = "%b %d %H:%M:%S",
+	.pid_file = "/var/run/apinger.pid",
+	.mailer = "/usr/lib/sendmail -t",
+	.status_interval = 0,
+	.status_file = NULL,
+	.rrd_interval = 0,
+	.user = "nobody",
+	.targets = NULL,
+	.alarms = NULL,
+	.pool = NULL,
+	.group = NULL,
+	.debug = 0,
+	.alarm_defaults = {
+		AL_NONE,	/* type */
+		"default",	/* name */
+		NULL,		/* mailto */
+		"nobody",	/* mailfrom */
+		NULL,		/* mailenvfrom */
+		"%r: %T(%t) *** %a ***", /* mailsubject */
+		NULL,		/* command on */
+		NULL,		/* command off */
+		NULL,		/* pipe on */
+		NULL,		/* pipe off */
+		0,		/* combine_interval */
+		0,		/* repeat_interval */
+		0,		/* repeat_max */
+		{},		/* params */
+		NULL		/* next */
+	},
+	.target_defaults = {
+		"default",	/* name */
+		"",		/* description */
+		"",		/* interface */
+		1000,		/* interval */
+		20,		/* avg_delay_samples */
+		5,		/* avg_loss_delay_samples */
+		50,		/* avg_loss_samples */
+		NULL,		/* rrd filename */
+		NULL, 0, NULL	/* alarms, alarms_override, next */
+	},
 };
 
-int foreground=1;
-char *config_file=CONFIG;
+int foreground = 1;
+char *config_file = CONFIG;
 
 int icmp_sock;
 int icmp6_sock;
 uint16_t ident;
 
-struct timeval next_probe={0,0};
+struct timeval next_probe = { 0, 0 };
 
 /* Interrupt handler */
 typedef void (*sighandler_t)(int);
-volatile int reload_request=0;
-volatile int status_request=0;
-volatile int interrupted_by=0;
-volatile int sigpipe_received=0;
-void signal_handler(int signum){
+volatile int reload_request = 0;
+volatile int status_request = 0;
+volatile int interrupted_by = 0;
+volatile int sigpipe_received = 0;
 
-	if (signum==SIGPIPE){
+void
+signal_handler(int signum)
+{
+	if (signum == SIGPIPE) {
 		signal(SIGPIPE, SIG_IGN);
-		sigpipe_received=1;
-	}
-	else if (signum==SIGHUP){
+		sigpipe_received = 1;
+	} else if (signum == SIGHUP) {
 		signal(SIGHUP, SIG_IGN);
-		reload_request=1;
-	}
-	else if (signum==SIGUSR1){
+		reload_request = 1;
+	} else if (signum == SIGUSR1) {
 		signal(SIGUSR1, SIG_IGN);
-		status_request=1;
-	}
-	else{
-		interrupted_by=signum;
+		status_request = 1;
+	} else {
+		interrupted_by = signum;
 	}
 }
 
