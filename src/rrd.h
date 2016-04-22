@@ -17,12 +17,12 @@
  *
  */
 
-#ifndef rrd_h
-#define rrd_h
+#ifndef RRD_H
+#define RRD_H
 
-void rrd_create(void);
-void rrd_update(void);
-int rrd_print_cgi(const char *graph_dir,const char *graph_location);
-void rrd_close(void);
+int	rrd_print_cgi(const char *, const char *);
+void	rrd_create(void);
+void	rrd_update(void);
+void	rrd_close(void);
 
-#endif
+#endif	/* RRD_H */
