@@ -63,32 +63,35 @@ struct config default_config = {
 	.group = NULL,
 	.debug = 0,
 	.alarm_defaults = {
-		AL_NONE,	/* type */
-		"default",	/* name */
-		NULL,		/* mailto */
-		"nobody",	/* mailfrom */
-		NULL,		/* mailenvfrom */
-		"%r: %T(%t) *** %a ***", /* mailsubject */
-		NULL,		/* command on */
-		NULL,		/* command off */
-		NULL,		/* pipe on */
-		NULL,		/* pipe off */
-		0,		/* combine_interval */
-		0,		/* repeat_interval */
-		0,		/* repeat_max */
-		{},		/* params */
-		NULL		/* next */
+		.mailsubject = "%r: %T(%t) *** %a ***",
+		.combine_interval = 0,
+		.repeat_interval = 0,
+		.mailfrom = "nobody",
+		.mailenvfrom = NULL,
+		.command_off = NULL,
+		.command_on = NULL,
+		.name = "default",
+		.pipe_off = NULL,
+		.pipe_on = NULL,
+		.repeat_max = 0,
+		.type = AL_NONE,
+		.mailto = NULL,
+		.next = NULL,
+		.p = { },
 	},
 	.target_defaults = {
-		"default",	/* name */
-		"",		/* description */
-		"",		/* interface */
-		1000,		/* interval */
-		20,		/* avg_delay_samples */
-		5,		/* avg_loss_delay_samples */
-		50,		/* avg_loss_samples */
-		NULL,		/* rrd filename */
-		NULL, 0, NULL	/* alarms, alarms_override, next */
+		.avg_loss_delay_samples = 5,
+		.avg_delay_samples = 20,
+		.avg_loss_samples = 50,
+		.alarms_override = 0,
+		.rrd_filename = NULL,
+		.description = "",
+		.name = "default",
+		.interval = 1000,
+		.force_down = 0,
+		.alarms = NULL,
+		.next = NULL,
+		.srcip = "",
 	},
 };
 
