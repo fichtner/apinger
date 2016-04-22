@@ -533,82 +533,98 @@ struct alarm_cfg *a;
 int
 configure_targets(struct config *cfg)
 {
-	struct target *t,*pt,*nt;
-	struct target_cfg *tc;
 	struct delayed_report *dr, *pdr, *ndr;
-	struct active_alarm_list *aal,*naal;
-	struct alarm_cfg *a, *na;
-	union addr addr, srcaddr;
+	struct active_alarm_list *aal, *naal;
 #ifdef HAVE_IPV6
 	struct addrinfo hints, *res;
 #endif
-	int r;
-	int l;
+	struct target *t, *pt, *nt;
+	struct alarm_cfg *a, *na;
+	union addr addr, srcaddr;
+	struct target_cfg *tc;
+	int r, l;
 
 	/* delete all unconfigured targets */
 	pt = NULL;
 
 	for (t = targets; t; t = nt) {
-		for(tc=cfg->targets;tc;tc=tc->next) {
-			if (strlen(tc->srcip) != strlen(t->config->srcip) || strcmp(tc->srcip, t->config->srcip))
+		for (tc = cfg->targets; tc; tc = tc->next) {
+			if (strlen(tc->srcip) != strlen(t->config->srcip) ||
+			    strcmp(tc->srcip, t->config->srcip)) {
 				continue;
-			if (strlen(tc->name) == strlen(t->name) && strcmp(tc->name,t->name)==0)
-				break;
-		}
-		nt=t->next;
-		if (tc==NULL){
-			if (pt==NULL)
-				targets=nt;
-			else
-				pt->next=nt;
-			for(aal=t->active_alarms;aal;aal=naal){
-				naal=aal->next;
-				toggle_alarm(t,aal->alarm,-1);
 			}
-			if (t->socket)
-				close(t->socket);
+			if (strlen(tc->name) == strlen(t->name) &&
+			    !strcmp(tc->name, t->name)) {
+				break;
+			}
+		}
 
-			if (delayed_reports != NULL) {
+		nt = t->next;
+
+		if (!tc) {
+			if (!pt) {
+				targets = nt;
+			} else {
+				pt->next = nt;
+			}
+			for (aal = t->active_alarms; aal; aal = naal) {
+				naal = aal->next;
+				toggle_alarm(t, aal->alarm, -1);
+			}
+			if (t->socket) {
+				close(t->socket);
+			}
+
+			if (delayed_reports) {
 				pdr = NULL;
-				for (dr = delayed_reports; dr != NULL; dr = ndr) {
+				for (dr = delayed_reports; dr; dr = ndr) {
 					ndr = dr->next;
 					if (dr->t == t) {
-						if (pdr == NULL)
+						if (!pdr) {
 							delayed_reports = ndr;
-						else
+						} else {
 							pdr->next = ndr;
+						}
 						free(dr);
-					} else
+					} else {
 						pdr = dr;
+					}
 				}
 			}
 
+			debug("Releasing target %s(%s)", t->name,
+			    t->description);
+
+			free(t->description);
 			free(t->queue);
 			free(t->rbuf);
-			debug("Releasing target %s(%s)", t->name, t->description);
 			free(t->name);
-			free(t->description);
 			free(t);
-		}
-		else {
-			pt=t;
+		} else {
+			pt = t;
 
-			for(aal=t->active_alarms;aal;aal=naal){
+			for (aal = t->active_alarms; aal; aal = naal) {
 				naal = aal->next;
-				for (a=cfg->alarms;a;a=na){
+				for (a = cfg->alarms; a; a = na) {
 					na = a->next;
-					if (aal->alarm->type == a->type && !strcmp(aal->alarm->name, a->name)) {
-						debug("Sticking to alrm %s since its still active", a->name);
+					if (aal->alarm->type == a->type &&
+					    !strcmp(aal->alarm->name,
+					    a->name)) {
+						debug("Sticking to alrm %s "
+						    "since its still active",
+						    a->name);
 						aal->alarm = a;
 						break;
 					}
 				}
 			}
-			if (delayed_reports != NULL) {
-				for (dr = delayed_reports; dr != NULL; dr = dr->next) {
+
+			if (delayed_reports) {
+				for (dr = delayed_reports; dr; dr = dr->next) {
 					if (dr->t == t) {
-						for (a=cfg->alarms;a;a=a->next) {
-							if (dr->a->type == a->type && !strcmp(dr->a->name, a->name)) {
+						for (a = cfg->alarms; a; a = a->next) {
+							if (dr->a->type == a->type &&
+							    !strcmp(dr->a->name, a->name)) {
 								debug("Updating delayed report for target(%s) and alarm(%s)", t->name, a->name);
 								dr->a = a;
 							}
@@ -620,75 +636,90 @@ configure_targets(struct config *cfg)
 	}
 
 	/* Update target configuration */
-	for(tc=cfg->targets;tc;tc=tc->next){
-		for(t=targets;t;t=t->next) {
-			if (strlen(tc->srcip) != strlen(t->config->srcip) || strcmp(tc->srcip, t->config->srcip))
+	for (tc = cfg->targets; tc; tc = tc->next) {
+		for (t = targets; t; t = t->next) {
+			if (strlen(tc->srcip) != strlen(t->config->srcip) ||
+			    strcmp(tc->srcip, t->config->srcip)) {
 				continue;
-			if (strlen(t->name) == strlen(tc->name) && !strcmp(t->name,tc->name))
+			}
+			if (strlen(t->name) == strlen(tc->name) &&
+			    !strcmp(t->name, tc->name)) {
 				break;
+			}
 		}
-		if (t==NULL) { /* new target */
-			memset(&addr,0,sizeof(addr));
-			r=inet_pton(AF_INET,tc->name,&addr.addr4.sin_addr);
-			if (r){
-				addr.addr.sa_family=AF_INET;
-			}else{
+
+		if (t == NULL) {
+			/* new target */
+			memset(&addr, 0, sizeof(addr));
+			r = inet_pton(AF_INET, tc->name, &addr.addr4.sin_addr);
+			if (r) {
+				addr.addr.sa_family = AF_INET;
+			} else {
 #ifdef HAVE_IPV6
 				memset(&hints, 0, sizeof(hints));
 				hints.ai_family = AF_INET6;
 				hints.ai_flags = AI_NUMERICHOST;
 				r = getaddrinfo(tc->name, NULL, &hints, &res);
-				if (r != 0) {
-					r=inet_pton(AF_INET6,tc->name,&addr.addr6.sin6_addr);
-					if (r==0){
+				if (r) {
+					r = inet_pton(AF_INET6, tc->name,
+					    &addr.addr6.sin6_addr);
+					if (!r) {
 #endif
-						logit("Bad host address: %s\n",tc->name);
-						logit("Ignoring target %s\n",tc->name);
+						logit("Bad host address: %s\n",
+						    tc->name);
+						logit("Ignoring target %s\n",
+						    tc->name);
 						continue;
 #ifdef HAVE_IPV6
 					}
 				} else {
-					memcpy(&addr.addr6, res->ai_addr, res->ai_addrlen);
+					memcpy(&addr.addr6, res->ai_addr,
+					    res->ai_addrlen);
 					freeaddrinfo(res);
 				}
-				if (icmp6_sock<0){
+				if (icmp6_sock < 0) {
 					logit("Sorry, IPv6 is not available\n");
-					logit("Ignoring target %s\n",tc->name);
+					logit("Ignoring target %s\n", tc->name);
 					continue;
 				}
-				addr.addr.sa_family=AF_INET6;
+				addr.addr.sa_family = AF_INET6;
 #endif
 			}
-			memset(&srcaddr,0,sizeof(srcaddr));
+			memset(&srcaddr, 0, sizeof(srcaddr));
 			debug("Converting srcip %s", tc->srcip);
-			r=inet_pton(AF_INET,tc->srcip,&srcaddr.addr4.sin_addr);
-			if (r){
-				srcaddr.addr.sa_family=AF_INET;
-			}else{
+			r = inet_pton(AF_INET, tc->srcip,
+			    &srcaddr.addr4.sin_addr);
+			if (r) {
+				srcaddr.addr.sa_family = AF_INET;
+			} else {
 #ifdef HAVE_IPV6
 				memset(&hints, 0, sizeof(hints));
 				hints.ai_family = AF_INET6;
 				hints.ai_flags = AI_NUMERICHOST;
 				r = getaddrinfo(tc->srcip, NULL, &hints, &res);
-				if (r != 0) {
-					r=inet_pton(AF_INET6,tc->srcip,&srcaddr.addr6.sin6_addr);
-					if (r==0){
+				if (r) {
+					r = inet_pton(AF_INET6, tc->srcip,
+					    &srcaddr.addr6.sin6_addr);
+					if (!r) {
 #endif
-						logit("Bad srcip address %s for target %s\n", tc->srcip, tc->name);
-						logit("Ignoring target %s\n",tc->name);
+						logit("Bad srcip address %s for target %s\n",
+						    tc->srcip, tc->name);
+						logit("Ignoring target %s\n",
+						    tc->name);
 						continue;
 #ifdef HAVE_IPV6
 					}
 				} else {
-					memcpy(&srcaddr.addr6, res->ai_addr, res->ai_addrlen);
+					memcpy(&srcaddr.addr6, res->ai_addr,
+					    res->ai_addrlen);
 					freeaddrinfo(res);
 				}
-				if (icmp6_sock<0){
+				if (icmp6_sock < 0) {
 					logit("Sorry, IPv6 is not available\n");
-					logit("Ignoring target %s\n",tc->name);
+					logit("Ignoring target %s\n", tc->name);
 					continue;
 				}
-				srcaddr.addr.sa_family=AF_INET6;
+				srcaddr.addr.sa_family = AF_INET6;
 #endif
 			}
 			t=NEW(struct target,1);
@@ -733,10 +764,10 @@ configure_targets(struct config *cfg)
 				assert(t->rbuf!= NULL);
 			}
 		} else {
-			t->rbuf=NEW(double,l);
-			assert(t->rbuf!=NULL);
+			t->rbuf = NEW(double, l);
+			assert(t->rbuf != NULL);
 		}
-		t->config=tc;
+		t->config = tc;
 	}
 
 	if (!targets) {
