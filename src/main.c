@@ -127,6 +127,7 @@ usage(void)
 	fprintf(stderr,"\tapinger -h\n");
 	fprintf(stderr,"\n");
 	fprintf(stderr,"\t-c <file>\talternate config file path.\n");
+	fprintf(stderr,"\t-t\ttest config and exit.\n");
 	fprintf(stderr,"\t-f\trun in foreground.\n");
 	fprintf(stderr,"\t-d\tdebug on.\n");
 	fprintf(stderr,"\t-g <dir>\tgenerate simple rrd-cgi script.\n");
