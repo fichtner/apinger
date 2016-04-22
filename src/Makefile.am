@@ -1,6 +1,5 @@
 
 EXTRA_DIST = cfgparser1.h apinger.conf
-EXTRA_PROGRAMS = cfgtest
 sbin_PROGRAMS = apinger
 
 apinger_SOURCES = \
@@ -18,13 +17,6 @@ apinger_SOURCES = \
 		rrd.c \
 		rrd.h \
 		tv_macros.h
-
-
-cfgtest_SOURCES = \
-		cfgparser1.y \
-		cfgparser2.l \
-		cfgtest.c \
-		conf.c
 
 AM_CFLAGS=-D"SYSCONFDIR=\"$(sysconfdir)\""
 

@@ -117,12 +117,14 @@ int pid, status, serrno;
 }
 #endif
 
-void usage(const char *name){
+static void
+usage(void)
+{
 	fprintf(stderr,"Alarm Pinger " PACKAGE_VERSION " (c) 2002 Jacek Konieczny <jajcus@jajcus.net>\n");
 	fprintf(stderr,"Usage:\n");
-	fprintf(stderr,"\t%s [-c <file>] [-f] [-d]\n",name);
-	fprintf(stderr,"\t%s [-c <file>] -g <dir> [-l <location>]\n",name);
-	fprintf(stderr,"\t%s -h\n",name);
+	fprintf(stderr,"\tapinger [-c <file>] [-f] [-d]\n");
+	fprintf(stderr,"\tapinger [-c <file>] -g <dir> [-l <location>]\n");
+	fprintf(stderr,"\tapinger -h\n");
 	fprintf(stderr,"\n");
 	fprintf(stderr,"\t-c <file>\talternate config file path.\n");
 	fprintf(stderr,"\t-f\trun in foreground.\n");
@@ -131,55 +133,62 @@ void usage(const char *name){
 	fprintf(stderr,		"\t\t<dir> is a directory where generated graph will be stored.\n");
 	fprintf(stderr,"\t-l <location>\tHTTP location of generated graphs.\n");
 	fprintf(stderr,"\t-h\tthis help message.\n");
+	exit(1);
 }
 
-int main(int argc,char *argv[]){
-struct passwd *pw;
-struct group *gr;
-int c;
-FILE *pidfile;
-pid_t pid;
-int i;
-int do_debug=0;
-int stay_foreground=0;
-char *graph_dir=NULL;
-char *graph_location="/apinger/";
+int
+main(int argc, char **argv)
+{
+	char *graph_location = "/apinger/";
+	int stay_foreground = 0;
+	char *graph_dir = NULL;
+	int config_test = 0;
+	struct passwd *pw;
+	struct group *gr;
+	int do_debug = 0;
+	FILE *pidfile;
+	pid_t pid;
+	int i;
+	int c;
 
-	while((c=getopt(argc,argv,"fdhc:g:l:")) != -1){
-		switch(c){
-			case 'f':
-				stay_foreground=1;
-				break;
-			case 'd':
-				do_debug=1;
-				break;
-			case 'h':
-				usage(argv[0]);
-				return 1;
-			case 'c':
-				config_file=optarg;
-				break;
-			case 'g':
-				graph_dir=optarg;
-				break;
-			case 'l':
-				graph_location=optarg;
-				break;
-			case ':':
-				fprintf (stderr, "Command-line option argument missing.\n");
-				return 1;
-			case '?':
-				fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-				return 1;
-			default:
-				return 1;
+	while ((c = getopt(argc,argv,"c:dfg:hl:t")) != -1) {
+		switch (c) {
+		case 'c':
+			config_file = optarg;
+			break;
+		case 'd':
+			do_debug = 1;
+			break;
+		case 'f':
+			stay_foreground = 1;
+			break;
+		case 'g':
+			graph_dir = optarg;
+			break;
+		case 'l':
+			graph_location = optarg;
+			break;
+		case 't':
+			config_test = 1;
+			break;
+		case 'h':
+		default:
+			usage();
+			/* NOTREACHED */
 		}
 	}
-	if (load_config(config_file)){
-		logit("Couldn't read config (\"%s\").",config_file);
-		return 1;
+
+	if (load_config(config_file)) {
+		logit("Couldn't read config (\"%s\").", config_file);
+		return (1);
 	}
-	if (do_debug) config->debug=1;
+
+	if (config_test) {
+		/* XXX message or log? */
+		return (0);
+	}
+
+	config->debug = do_debug;
 
 	if (graph_dir!=NULL)
 		return rrd_print_cgi(graph_dir,graph_location);
