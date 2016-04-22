@@ -873,7 +873,6 @@ main_loop(void)
 	int timeout, timedelta;
 	struct alarm_cfg *a;
 	struct target *t;
-	char buf[100];
 	int npfd = 0;
 	int downtime;
 	int i;
@@ -1011,8 +1010,13 @@ main_loop(void)
 		}
 
 #if 0
-		strftime(buf,100,"%b %d %H:%M:%S",localtime(&next_probe.tv_sec));
-		debug("Next event scheduled for %s",buf);
+		{
+			char buf[100];
+
+			strftime(buf, sizeof(buf), "%b %d %H:%M:%S",
+			    localtime(&next_probe.tv_sec));
+			debug("Next event scheduled for %s", buf);
+		}
 #endif
 
 		gettimeofday(&cur_time, NULL);

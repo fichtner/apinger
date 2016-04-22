@@ -40,7 +40,7 @@ struct config default_config = {
 		20,		/* avg_delay_samples */
 		5,		/* avg_loss_delay_samples */
 		50,		/* avg_loss_samples */
-		NULL,NULL	/* alarms, next */
+		NULL, NULL	/* alarms, next */
 	},
 	0,			/* debug */
 	"nobody",		/* user */

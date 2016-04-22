@@ -210,14 +210,20 @@ reloophack:
 	analyze_reply(time_recv,icmp->icmp_seq,(struct trace_info*)(icmp+1), timedelta);
 }
 
-int make_icmp_socket(struct target *t){
-int on;
-
+int
+make_icmp_socket(struct target *t)
+{
 	t->socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	if (t->socket < 0)
-		logit("Could not create socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
-	else if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr4, sizeof(t->ifaddr.addr4)) < 0)
-		logit("Could not bind socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
+	if (t->socket < 0) {
+		logit("Could not create socket on address(%s) "
+		    "for monitoring address %s(%s) with error %m",
+		    t->config->srcip, t->name, t->description);
+	} else if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr4,
+	    sizeof(t->ifaddr.addr4)) < 0) {
+		logit("Could not bind socket on address(%s) "
+		    "for monitoring address %s(%s) with error %m",
+		    t->config->srcip, t->name, t->description);
+	}
 
 	return t->socket;
 }

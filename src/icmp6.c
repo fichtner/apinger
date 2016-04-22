@@ -133,8 +133,6 @@ int ret;
 void recv_icmp6(struct target *t, struct timeval *time_recv, int timedelta){
 int len,icmplen,datalen;
 char buf[1024];
-char abuf[100];
-const char *name;
 struct sockaddr_in6 from;
 struct icmp6_hdr *icmp;
 socklen_t sl;
@@ -156,10 +154,17 @@ reloophack6:
 		goto reloophack6;
 		return;
 	}
+
 #if 0
-	name=inet_ntop(AF_INET6,&from.sin6_addr,abuf,100);
-	debug("Ping reply from %s",name);
+	{
+		const char *name;
+		char abuf[100];
+
+		name = inet_ntop(AF_INET6, &from.sin6_addr, abuf, sizeof(abuf));
+		debug("Ping reply from %s", name);
+	}
 #endif
+
 	datalen=icmplen-sizeof(*icmp);
 	if (datalen!=sizeof(struct trace_info)){
 		debug("Packet data truncated.");
