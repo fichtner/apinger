@@ -251,25 +251,29 @@ time_t tim;
 	return macros_buf;
 }
 
-void write_report(FILE *f,struct target *t,struct alarm_cfg *a,int on){
-time_t tm;
+void
+write_report(FILE *f, struct target *t)
+{
+	fprintf(f, "%s|%s|%i|%i|%ld|", t->name, t->description,
+	    t->last_sent + 1, t->received, t->last_received_tv.tv_sec);
 
-	tm=time(NULL);
-	fprintf(f,"%s|%s|%i|%i|%ld|",t->name, t->description, t->last_sent+1,
-		t->received, t->last_received_tv.tv_sec);
-	if (AVG_DELAY_KNOWN(t)){
-		fprintf(f,"%4.3fms|",AVG_DELAY(t));
+	if (AVG_DELAY_KNOWN(t)) {
+		fprintf(f, "%4.3fms|", AVG_DELAY(t));
 	}
-	if (AVG_LOSS_KNOWN(t)){
-		fprintf(f,"%5.1f%%",AVG_LOSS(t));
+
+	if (AVG_LOSS_KNOWN(t)) {
+		fprintf(f, "%5.1f%%", AVG_LOSS(t));
 	}
+
 	fprintf(f, "\n");
 }
 
-void make_reports(struct target *t,struct alarm_cfg *a,int on){
-FILE *p;
-int ret;
-const char *command;
+void
+make_reports(struct target *t, struct alarm_cfg *a, int on)
+{
+	const char *command;
+	FILE *p;
+	int ret;
 
 	if (on>0) command=a->pipe_on;
 	else command=a->pipe_off;
@@ -282,7 +286,7 @@ const char *command;
 			myperror("popen");
 		}
 		else {
-			write_report(p,t,a,on);
+			write_report(p, t);
 			ret=pclose(p);
 			if (!WIFEXITED(ret)){
 				logit("Error while piping report.");

@@ -17,7 +17,6 @@
  *
  */
 
-
 %{
 #include <math.h>
 #include "cfgparser1.h"
@@ -27,10 +26,12 @@
 #define LOCINC yylloc.last_column+=yyleng
 extern YYLTYPE yylloc;
 
+static void yyunput(int, char *) __attribute__((unused));
+static int input(void) __attribute__((unused));
+
 %}
+
 %option noyywrap
-
-
 DIGIT	[0-9]
 
 %%
@@ -126,10 +127,4 @@ yes		{ LOC; LOCINC; return YES; }
 		  logit("Unexpected character: '%c'", yytext[0]);
 		  return ERROR;
 		}
-
 %%
-
-void *p=yyunput;
-/*
- vi: ft=lex
-*/
