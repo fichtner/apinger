@@ -22,6 +22,9 @@
 #ifdef HAVE_STDLIB_H
 # include <stdlib.h>
 #endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
@@ -257,7 +260,10 @@ load_config(const char *filename)
 		if (config) {
 			struct pool_item *pool;
 
-			configure_targets(&cur_config);
+			while (configure_targets(config)) {
+				/* retry every minute, beats exit() */
+				sleep(60);
+			}
 
 			pool = config->pool;
 			pool_clear(&pool);
