@@ -771,7 +771,6 @@ configure_targets(struct config *cfg)
 	}
 
 	if (!targets) {
-		logit("No usable targets found, sleeping...");
 		return (1);
 	}
 
@@ -918,9 +917,9 @@ main_loop(void)
 	int downtime;
 	int i;
 
-	while (configure_targets(config)) {
-		/* retry every minute, beats exit() */
-		sleep(60);
+	if (configure_targets(config)) {
+		logit("No usable targets found, exiting");
+		exit(1);
 	}
 
 	memset(&pfd, '\0', sizeof pfd);

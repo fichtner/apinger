@@ -37,6 +37,8 @@
 # define assert(cond)
 #endif
 
+#include "debug.h"
+
 struct config *config = NULL;
 
 void *
@@ -260,9 +262,9 @@ load_config(const char *filename)
 		if (config) {
 			struct pool_item *pool;
 
-			while (configure_targets(config)) {
-				/* retry every minute, beats exit() */
-				sleep(60);
+			if (configure_targets(config)) {
+				logit("No usable targets found, exiting");
+				exit(1);
 			}
 
 			pool = config->pool;
