@@ -721,6 +721,10 @@ configure_targets(struct config *cfg)
 #endif
 			}
 			memset(&srcaddr, 0, sizeof(srcaddr));
+			if (!tc->srcip) {
+				debug("No source IP, trying target");
+				tc->srcip = strdup(tc->name);
+			}
 			debug("Converting srcip %s", tc->srcip);
 			r = inet_pton(AF_INET, tc->srcip,
 			    &srcaddr.addr4.sin_addr);
@@ -757,17 +761,28 @@ configure_targets(struct config *cfg)
 				srcaddr.addr.sa_family = AF_INET6;
 #endif
 			}
-			t=NEW(struct target,1);
-			t->name=strdup(tc->name);
-			t->description=strdup(tc->description);
-			debug("Creating new target %s(%s)", t->name, t->description);
-			t->addr=addr;
-			t->ifaddr=srcaddr;
-			t->next=targets;
-			t->config=tc;
-			targets=t;
-			if(t->addr.addr.sa_family==AF_INET) make_icmp_socket(t);
-			if(t->addr.addr.sa_family==AF_INET6) make_icmp6_socket(t);
+
+			t = NEW(struct target, 1);
+			t->name = strdup(tc->name);
+			t->description = strdup(tc->description);
+			debug("Creating new target %s (%s)", t->name,
+			    t->description);
+			t->addr = addr;
+			t->ifaddr = srcaddr;
+			t->next = targets;
+			t->config = tc;
+			targets = t;
+
+			switch (t->addr.addr.sa_family) {
+			case AF_INET:
+				make_icmp_socket(t);
+				break;
+			case AF_INET6:
+				make_icmp6_socket(t);
+				break;
+			default:
+				break;
+			}
 		}
 		l=tc->avg_loss_delay_samples+tc->avg_loss_samples;
 		if (t->queue) {

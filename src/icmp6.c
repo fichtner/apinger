@@ -155,7 +155,6 @@ reloophack6:
 		return;
 	}
 
-#if 0
 	{
 		const char *name;
 		char abuf[100];
@@ -163,7 +162,6 @@ reloophack6:
 		name = inet_ntop(AF_INET6, &from.sin6_addr, abuf, sizeof(abuf));
 		debug("Ping reply from %s", name);
 	}
-#endif
 
 	datalen=icmplen-sizeof(*icmp);
 	if (datalen!=sizeof(struct trace_info)){
@@ -174,20 +172,28 @@ reloophack6:
 }
 
 
-int make_icmp6_socket(struct target *t){
-int opt;
+int
+make_icmp6_socket(struct target *t)
+{
+	int opt;
 
 	t->socket = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-	if (t->socket <0)
-		logit("Could not create socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
-	else {
-		opt=2;
+	if (t->socket < 0) {
+		logit("Could not create socket on address (%s) for monitoring address %s (%s)", t->config->srcip, t->name, t->description);
+		myperror("socket()");
+	} else {
+		opt = 2;
+
 #if defined(SOL_RAW) && defined(IPV6_CHECKSUM)
-		if (setsockopt(t->socket, SOL_RAW, IPV6_CHECKSUM, &opt, sizeof(int)))
+		if (setsockopt(t->socket, SOL_RAW, IPV6_CHECKSUM, &opt, sizeof(int))) {
 			myperror("setsockopt(IPV6_CHECKSUM)");
+		}
 #endif
-		if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr6, sizeof(t->ifaddr.addr6)) < 0)
+
+		if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr6, sizeof(t->ifaddr.addr6)) < 0) {
 			logit("Could not bind socket on address(%s) for monitoring address %s(%s) with error %m", t->config->srcip, t->name, t->description);
+			myperror("bind()");
+		}
 	}
 
 	return t->socket;
@@ -196,8 +202,20 @@ int opt;
 #else /*HAVE_IPV6*/
 #include "apinger.h"
 
-int make_icmp6_socket(struct target *t){ return -1; }
-void recv_icmp6(struct target *t){}
-void send_icmp6_probe(struct target *t,int seq){}
+int
+make_icmp6_socket(struct target *t)
+{
+	return (-1);
+}
+
+void
+recv_icmp6(struct target *t)
+{
+}
+
+void
+send_icmp6_probe(struct target *t, int seq)
+{
+}
 
 #endif /*HAVE_IPV6*/

@@ -37,48 +37,58 @@
 # include <stdarg.h>
 #endif
 
-
-void logit(const char *format, ...){
-va_list args;
+void
+logit(const char *format, ...)
+{
+	va_list args;
 
 	va_start(args, format);
+
 	if (foreground){
-		time_t t=time(NULL);
+		time_t t = time(NULL);
 		static char buf[100];
-		strftime(buf,100,"%b %d %H:%M:%S",localtime(&t));
-		fprintf(stderr,"[%s] ",buf);
+
+		strftime(buf, sizeof(buf), "%b %d %H:%M:%S", localtime(&t));
+		fprintf(stderr, "[%s] ", buf);
 		vfprintf(stderr, format, args);
-		fprintf(stderr,"\n");
+		fprintf(stderr, "\n");
+	} else{
+		vsyslog(LOG_ERR, format, args);
 	}
-	else{
-		vsyslog(LOG_ERR,format,args);
+
+	va_end(args);
+}
+
+void
+debug(const char *format, ...)
+{
+	va_list args;
+
+	if (!config->debug) {
+		return;
+	}
+
+	va_start(args, format);
+
+	if (foreground){
+		time_t t = time(NULL);
+		static char buf[100];
+
+		strftime(buf, sizeof(buf), "%b %d %H:%M:%S", localtime(&t));
+		fprintf(stderr, "[%s] ", buf);
+		vfprintf(stderr, format, args);
+		fprintf(stderr, "\n");
+	} else {
+		vsyslog(LOG_DEBUG, format, args);
 	}
 	va_end(args);
 }
 
-void debug(const char *format, ...){
-va_list args;
-
-	if (!config->debug) return;
-
-	va_start(args, format);
-	if (foreground){
-		time_t t=time(NULL);
-		static char buf[100];
-		strftime(buf,100,"%b %d %H:%M:%S",localtime(&t));
-		fprintf(stderr,"[%s] ",buf);
-		vfprintf(stderr, format, args);
-		fprintf(stderr,"\n");
-	}
-	else{
-		vsyslog(LOG_DEBUG,format,args);
-	}
-	va_end(args);
-}
-
-void myperror(const char *prefix){
-	if (foreground)
+void myperror(const char *prefix)
+{
+	if (foreground) {
 		perror(prefix);
-	else
-		syslog(LOG_ERR,"%s: %s",prefix,strerror(errno));
+	} else {
+		syslog(LOG_ERR, "%s: %s", prefix, strerror(errno));
+	}
 }

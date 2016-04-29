@@ -199,9 +199,9 @@ reloophack:
 		goto reloophack;
 		return;
 	}
-#if 0
+
 	debug("Ping reply from %s",inet_ntoa(from.sin_addr));
-#endif
+
 	datalen=icmplen-sizeof(*icmp);
 	if (datalen!=sizeof(struct trace_info)){
 		debug("Packet data truncated.");
@@ -215,14 +215,16 @@ make_icmp_socket(struct target *t)
 {
 	t->socket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (t->socket < 0) {
-		logit("Could not create socket on address(%s) "
-		    "for monitoring address %s(%s) with error %m",
+		logit("Could not create socket on address (%s) "
+		    "for monitoring address %s (%s)",
 		    t->config->srcip, t->name, t->description);
+		myperror("socket()");
 	} else if (bind(t->socket, (struct sockaddr *)&t->ifaddr.addr4,
 	    sizeof(t->ifaddr.addr4)) < 0) {
-		logit("Could not bind socket on address(%s) "
-		    "for monitoring address %s(%s) with error %m",
+		logit("Could not bind socket on address (%s) "
+		    "for monitoring address %s (%s)",
 		    t->config->srcip, t->name, t->description);
+		myperror("bind()");
 	}
 
 	return t->socket;
