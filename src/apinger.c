@@ -54,6 +54,44 @@
 # define assert(cond)
 #endif
 
+#ifndef HAVE_CLOCK_GETTIME
+#undef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC	0
+static int
+clock_gettime(int clock_id, struct timespec *tp)
+{
+	struct timeval now;
+	int ret;
+
+	(void)clock_id;
+
+	ret = gettimeofday(&now, NULL);
+	if (ret) {
+		return ret;
+	}
+
+	tp->tv_nsec = now.tv_usec * 1000;
+	tp->tv_sec = now.tv_sec;
+
+	return (0);
+}
+#endif
+
+void
+apinger_gettime(struct timeval *tp)
+{
+	struct timespec now;
+
+	memset(&now, 0, sizeof(now));
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now)) {
+		debug("System time fetch failed");
+	}
+
+	tp->tv_usec = now.tv_nsec / 1000;
+	tp->tv_sec = now.tv_sec;
+}
+
 #ifndef timerisset
 # define timerisset(tvp)        ((tvp)->tv_sec || (tvp)->tv_usec)
 #endif
@@ -118,7 +156,7 @@ void alarm_on(struct target *t,struct alarm_cfg *a){
 struct active_alarm_list *al;
 struct timeval cur_time,tv;
 
-	gettimeofday(&cur_time,NULL);
+	apinger_gettime(&cur_time);
 	al=NEW(struct active_alarm_list,1);
 	al->next=t->active_alarms;
 	al->alarm=a;
@@ -392,7 +430,7 @@ struct delayed_report *dr,*tdr;
 		dr->t=t;
 		dr->a=a;
 		dr->on=on;
-		gettimeofday(&dr->timestamp,NULL);
+		apinger_gettime(&dr->timestamp);
 		dr->next=NULL;
 		if (tdr==NULL)
 			delayed_reports=dr;
@@ -410,7 +448,7 @@ struct timeval ct,tv;
 int ret;
 
 	if (cur_time==NULL){
-		gettimeofday(&ct,NULL);
+		apinger_gettime(&ct);
 		cur_time=&ct;
 	}
 	if (!timerisset(next_event) || timercmp(next_event,cur_time,<)){
@@ -824,7 +862,7 @@ configure_targets(struct config *cfg)
 		return (1);
 	}
 
-	gettimeofday(&operation_started, NULL);
+	apinger_gettime(&operation_started);
 
 	if (cfg->rrd_interval) {
 		rrd_create();
@@ -975,7 +1013,7 @@ main_loop(void)
 	memset(&pfd, '\0', sizeof pfd);
 
 	if (config->status_interval) {
-		gettimeofday(&cur_time, NULL);
+		apinger_gettime(&cur_time);
 		tv.tv_sec=config->status_interval / 1000;
 		tv.tv_usec=(config->status_interval % 1000) * 1000;
 		timeradd(&cur_time, &tv, &next_status);
@@ -984,7 +1022,7 @@ main_loop(void)
 	while (!interrupted_by) {
 		npfd = 0;
 
-		gettimeofday(&cur_time, NULL);
+		apinger_gettime(&cur_time);
 		if (!timercmp(&next_probe, &cur_time, >)) {
 			timerclear(&next_probe);
 		}
@@ -1025,7 +1063,7 @@ main_loop(void)
 			}
 		}
 
-		gettimeofday(&event_time, NULL);
+		apinger_gettime(&event_time);
 		if (reload_request) {
 			reload_request = 0;
 			logit("SIGHUP received, reloading configuration.");
@@ -1099,7 +1137,6 @@ main_loop(void)
 			}
 		}
 
-#if 0
 		{
 			char buf[100];
 
@@ -1107,9 +1144,8 @@ main_loop(void)
 			    localtime(&next_probe.tv_sec));
 			debug("Next event scheduled for %s", buf);
 		}
-#endif
 
-		gettimeofday(&cur_time, NULL);
+		apinger_gettime(&cur_time);
 		if (timercmp(&cur_time, &event_time, <)) {
 			timedelta = 0;
 		} else {
@@ -1126,7 +1162,7 @@ main_loop(void)
 		if (poll(pfd, npfd, timeout) < 0) {
 			continue;
 		}
-		gettimeofday(&cur_time, NULL);
+		apinger_gettime(&cur_time);
 
 		for (i = 0; i < npfd; i++) {
 			if (!(pfd[i].revents & POLLIN)) {

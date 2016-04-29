@@ -49,6 +49,7 @@ AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
+AC_CHECK_FUNCS(clock_gettime)
 AC_CHECK_FUNCS([gettimeofday inet_ntoa memset socket \
 strdup strerror strpbrk poll vsyslog time popen setvbuf access],
 	[],AC_MSG_ERROR(some needed function is missing))

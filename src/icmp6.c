@@ -105,10 +105,10 @@ int ret;
 	p->icmp6_id=ident;
 
 #ifdef HAVE_SCHED_YIELD
-	/* Give away our time now, or we may be stopped between gettimeofday() and sendto() */
+	/* Give away our time now, or we may be stopped between apinger_gettime() and sendto() */
 	sched_yield();
 #endif
-	gettimeofday(&cur_time,NULL);
+	apinger_gettime(&cur_time);
 	ti.timestamp=cur_time;
 	ti.target_id=t;
 	ti.seq=seq;

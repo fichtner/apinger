@@ -125,6 +125,8 @@ extern uint16_t ident;
 
 extern struct timeval next_probe;
 
+void apinger_gettime(struct timeval *tp);
+
 int make_icmp_socket(struct target *t);
 void recv_icmp(struct target *t, struct timeval *, int);
 void send_icmp_probe(struct target *t,int seq);
