@@ -278,6 +278,10 @@ main(int argc, char **argv)
 	signal(SIGCHLD,sigchld_handler);
 #endif
 	logit("Starting Alarm Pinger, apinger(%i)", ident);
+#ifndef HAVE_CLOCK_GETTIME
+	logit("Warning: Falling back to gettimeofday() usage. "
+	    "Measurements may skew with e.g. NTP enabled.");
+#endif
 
 	main_loop();
 #if 0
