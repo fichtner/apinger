@@ -1,20 +1,6 @@
 
 AC_PREREQ([2.52])
 
-# JK_LINUX_FILTER
-# Test for Linux socket filtering
-# -----------------------------------------------------
-AC_DEFUN([JK_LINUX_FILTER],
-[AC_CHECK_HEADERS([linux/types.h],HAS_LINUX_TYPES_H=yes)
-if test "x$HAS_LINUX_TYPES_H" = "xyes" ; then
-	AC_CHECK_HEADERS([linux/filter.h],[],[],[
-#include <sys/types.h>
-#include <unistd.h>
-#include <linux/types.h>
-])
-fi
-])
-
 # JK_AP_INET
 # Test for IPv4, ICMP services needed for apinger
 # -----------------------------------------------------

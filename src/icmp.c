@@ -58,39 +58,6 @@
 #endif
 #include "debug.h"
 
-#ifdef HAVE_LINUX_FILTER_H
-# ifdef HAVE_LINUX_TYPES_H
-#  include <linux/types.h>
-# endif
-# include <linux/filter.h>
-#endif /* HAVE_LINUX_FILTER_H */
-
-/* filter instalation code borrowed from iputils */
-void install_filter(){
-#ifdef HAVE_LINUX_FILTER_H
-        static struct sock_filter insns[] = {
-                BPF_STMT(BPF_LDX|BPF_B|BPF_MSH, 0), /* Skip IP header. F..g BSD... Look into ping.  */
-                BPF_STMT(BPF_LD|BPF_H|BPF_IND, 4), /* Load icmp echo ident */
-                BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, 0xAAAA, 0, 1), /* Ours? */
-                BPF_STMT(BPF_RET|BPF_K, ~0U), /* Yes, it passes. */
-                BPF_STMT(BPF_LD|BPF_B|BPF_IND, 0), /* Load icmp type */
-                BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, ICMP_ECHOREPLY, 1, 0), /* Echo? */
-                BPF_STMT(BPF_RET|BPF_K, 0xFFFFFFF), /* No. It passes. */
-                BPF_STMT(BPF_RET|BPF_K, 0) /* Echo with wrong ident. Reject. */
-        };
-        static struct sock_fprog filter = {
-                sizeof insns / sizeof(insns[0]),
-                insns
-        };
-
-        /* Patch bpflet for current identifier. */
-        insns[2] = (struct sock_filter)BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, htons(ident), 0, 1);
-
-        if (setsockopt(icmp_sock, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter)))
-                myperror("WARNING: failed to install socket filter\n");
-#endif /* HAS_LINUX_FILTER_H */
-}
-
 /* function borrowed from iputils */
 u_short in_cksum(const u_short *addr, register int len, u_short csum){
 

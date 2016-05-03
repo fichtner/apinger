@@ -119,8 +119,6 @@ struct target *targets;
 extern int foreground;
 extern char *config_file;
 
-extern int icmp_sock;
-extern int icmp6_sock;
 extern uint16_t ident;
 
 extern struct timeval next_probe;

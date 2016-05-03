@@ -27,7 +27,6 @@ AC_CHECK_HEADERS([arpa/inet.h errno.h malloc.h \
 		limits.h sys/wait.h sched.h sys/ioctl.h sys/uio.h])
 AC_HEADER_TIME
 
-JK_LINUX_FILTER
 JK_AP_INET
 
 AC_ARG_ENABLE(ipv6,[AC_HELP_STRING([--disable-ipv6],

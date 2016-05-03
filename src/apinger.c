@@ -750,11 +750,6 @@ configure_targets(struct config *cfg)
 					    res->ai_addrlen);
 					freeaddrinfo(res);
 				}
-				if (icmp6_sock < 0) {
-					logit("Sorry, IPv6 is not available\n");
-					logit("Ignoring target %s\n", tc->name);
-					continue;
-				}
 				addr.addr.sa_family = AF_INET6;
 #endif
 			}
@@ -790,11 +785,6 @@ configure_targets(struct config *cfg)
 					memcpy(&srcaddr.addr6, res->ai_addr,
 					    res->ai_addrlen);
 					freeaddrinfo(res);
-				}
-				if (icmp6_sock < 0) {
-					logit("Sorry, IPv6 is not available\n");
-					logit("Ignoring target %s\n", tc->name);
-					continue;
 				}
 				srcaddr.addr.sa_family = AF_INET6;
 #endif

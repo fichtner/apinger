@@ -74,8 +74,6 @@ struct config default_config = {
 int foreground = 1;
 char *config_file = CONFIG;
 
-int icmp_sock;
-int icmp6_sock;
 uint16_t ident;
 
 struct timeval next_probe = { 0, 0 };
@@ -185,7 +183,7 @@ main(int argc, char **argv)
 	}
 
 	if (config_test) {
-		/* XXX message or log? */
+		logit("Config is fine.");
 		return (0);
 	}
 
@@ -205,14 +203,6 @@ main(int argc, char **argv)
 			fclose(pidfile);
 		}
 	}
-
-#if 0
-	make_icmp_socket();
-	make_icmp6_socket();
-	if (icmp6_sock<0 && icmp_sock<0){
-		return 1;
-	}
-#endif
 
 	pw=getpwnam(config->user);
 	if (!pw) {
@@ -249,9 +239,9 @@ main(int argc, char **argv)
 			exit(0);
 		}
 		foreground=0;
-		for(i=0;i<255;i++)
-			if (i!=icmp_sock && i!=icmp6_sock)
-				close(i);
+		for (i = 0; i < 255; i++) {
+			close(i);
+		}
 		setsid();
 	}
 
@@ -284,10 +274,6 @@ main(int argc, char **argv)
 #endif
 
 	main_loop();
-#if 0
-	if (icmp_sock>=0) close(icmp_sock);
-	if (icmp6_sock>=0) close(icmp6_sock);
-#endif
 
 	logit("Exiting on signal %i.",interrupted_by);
 
