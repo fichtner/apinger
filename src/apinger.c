@@ -348,50 +348,58 @@ make_reports(struct target *t, struct alarm_cfg *a, int on)
 	FILE *p;
 	int ret;
 
-	if (on>0) command=a->pipe_on;
-	else command=a->pipe_off;
-	if (command){
-		command=subst_macros(command,t,a,on);
-		debug("Popening: %s",command);
-		p=popen(command,"w");
-		if (!p){
-			logit("Couldn't pipe report through %s",command);
+	command = on > 0 ? a->pipe_on : a->pipe_off;
+
+	if (command) {
+		command = subst_macros(command, t, a, on);
+		debug("Popening: %s", command);
+		p = popen(command, "w");
+		if (!p) {
+			logit("Couldn't pipe report through %s", command);
 			myperror("popen");
-		}
-		else {
+		} else {
 			write_report(p, t);
-			ret=pclose(p);
-			if (!WIFEXITED(ret)){
+			ret = pclose(p);
+			if (!WIFEXITED(ret)) {
 				logit("Error while piping report.");
-				logit("command (%s) terminated abnormally.",command);
-			}
-			else if (WEXITSTATUS(ret)!=0){
+				logit("command (%s) terminated abnormally.",
+				    command);
+			} else if (WEXITSTATUS(ret)) {
 				logit("Error while piping report.");
-				logit("command (%s) exited with status: %i",command,WEXITSTATUS(ret));
+				logit("command (%s) exited with status: %i",
+				    command, WEXITSTATUS(ret));
 			}
 		}
 	}
-	if (on>0) command=a->command_on;
-	else command=a->command_off;
-	if (command){
-		command=subst_macros(command,t,a,on);
-		debug("Starting: %s",command);
-		ret=system(command);
-		if (!WIFEXITED(ret)){
-			logit("Error while starting command form alarm(%s) on target(%s-%s)", a->name, t->name, t->description);
-			logit("command (%s) terminated abnormally.",command);
-		}
-		else if (WEXITSTATUS(ret)!=0){
-			logit("Error while starting command form alarm(%s) on target(%s-%s)", a->name, t->name, t->description);
-			logit("command (%s) exited with status: %i",command,WEXITSTATUS(ret));
+
+	command = on > 0 ? a->command_on : a->command_off;
+
+	if (command) {
+		command = subst_macros(command, t, a, on);
+		debug("Starting: %s", command);
+		ret = system(command);
+		if (!WIFEXITED(ret)) {
+			logit("Error while starting command form alarm(%s) "
+			    "on target(%s-%s)", a->name, t->name,
+			    t->description);
+			logit("command (%s) terminated abnormally.", command);
+		} else if (WEXITSTATUS(ret)) {
+			logit("Error while starting command form alarm(%s) "
+			    "on target(%s-%s)", a->name, t->name,
+			    t->description);
+			logit("command (%s) exited with status: %i",
+			    command, WEXITSTATUS(ret));
 		}
 	}
 }
 
-void make_delayed_reports(void){
+void make_delayed_reports(void)
+{
 	struct delayed_report *wdr;
 
-	if (delayed_reports==NULL) return;
+	if (!delayed_reports) {
+		return;
+	}
 
 	wdr = delayed_reports;
 
