@@ -1,7 +1,0 @@
-
-- sometimes crashes on exit (segmentation or memory fault)
-- on high load/short intervals there are errors in loss computation.
-  When such error is detected apinger will abort()
-- code is ugly, this is probably unfixable without total rewrite
-
---

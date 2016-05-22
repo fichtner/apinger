@@ -1,6 +1,0 @@
-- fix bugs
-- add more configurable messages
-- improve config file parser, so multi-line strings with control characters may be used
-- dependency between targets (eg. don't report "down" alarm on server, when router is down)
-
---

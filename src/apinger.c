@@ -762,6 +762,7 @@ configure_targets(struct config *cfg)
 #endif
 			}
 			memset(&srcaddr, 0, sizeof(srcaddr));
+			/* XXX only for sample config run on loopback */
 			if (!tc->srcip) {
 				debug("No source IP, trying target");
 				tc->srcip = strdup(tc->name);

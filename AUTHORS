@@ -1,10 +1,10 @@
-Author:
-	Jacek Konieczny <jajcus@jajcus.net>
+Authors:
+
+Jacek Konieczny <jajcus@jajcus.net>
+Franco Fichtner <franco@opnsense.org>
 
 
 Big thanks to:
 
-	Michael L. Hostbaek <mich@freebsdcluster.org>
-		for great help with FreeBSD port
-
---
+Michael L. Hostbaek <mich@freebsdcluster.org>
+for great help with FreeBSD port

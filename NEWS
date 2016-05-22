@@ -1,3 +1,22 @@
+* Version 0.7
+
+	Main changes from 0.7
+
+		- use clock_monotonic() when available so apinger works
+		  ok with NTP running
+
+		- partial code style rework according to BSD style(9)
+
+		- several pfSense inherited patches that change apinger
+		  to work as a gateway monitor as opposed to endpoint
+		  monitor
+
+		- added `-t' option to check the config to replace the
+		  separate cfgtest utility
+
+		- removed the FAQ with its enormous dependency chain in
+		  favour of a simple manual page
+
 * Version 0.6.1
 
 	Main changes from 0.6:
