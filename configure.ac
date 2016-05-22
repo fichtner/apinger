@@ -1,6 +1,5 @@
-
 # Process this file with autoconf to produce a configure script.
-AC_INIT([apinger], [0.6.1], [jajcus@jajcus.net])
+AC_INIT([apinger], [0.7], [jajcus@jajcus.net])
 AC_CONFIG_SRCDIR([src/apinger.c])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
