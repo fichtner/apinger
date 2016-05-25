@@ -1,6 +1,9 @@
-
 EXTRA_DIST = cfgparser1.h apinger.conf
+
 sbin_PROGRAMS = apinger
+dist_man_MANS=	apinger.1 apinger.conf.5
+
+mandir=	$(prefix)/man
 
 apinger_SOURCES = \
 		apinger.c \
@@ -19,5 +22,4 @@ apinger_SOURCES = \
 		tv_macros.h
 
 AM_CFLAGS=-D"SYSCONFDIR=\"$(sysconfdir)\""
-
 AM_YFLAGS=-d

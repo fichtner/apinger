@@ -1,0 +1,66 @@
+.\"
+.\" Alarm Pinger (c) 2002 Jacek Konieczny <jajcus@jajcus.net>
+.\" Alarm Pinger (c) 2016 Franco Fichtner <franco@opnsense.org>
+.\"
+.\" This program is free software; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License
+.\" version 2 as published by the Free Software Foundation.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public
+.\" License along with this program; if not, write to the Free
+.\" Software Foundation, Inc., 59 Temple Place, Suite 330,
+.\" Boston, MA02111-1307, USA
+.\"
+.Dd May 25, 2016
+.Dt APINGER 1
+.Os
+.Sh NAME
+.Nm apinger
+.Nd Alarm pinger
+.Sh SYNOPSIS
+.Nm
+.Op Fl dfht
+.Op Fl c Ar config-file
+.Op Fl g Ar graph-dir
+.Op Fl l Ar location-dir
+.Sh DESCRIPTION
+.Nm
+is a tool for network monitoring.
+It periodically tests the reachability of one or more network devices
+and the quality of their network connections.
+It sends ICMP echo-requests and analyses their ICMP echo-replies.
+.Pp
+The options are as follows:
+.Bl -tag -width ".Fl l Ar location-dir" -offset indent
+.It Fl c Ar config-file
+The config file to be used.
+.It Fl d
+Enable debug mode.
+.It Fl f
+Enable foreground mode.
+.It Fl g Ar graph-dir
+Generate a RRD CGI script in this directory.
+.It Fl h
+Show usage and exit.
+.It Fl l Ar location-dir
+HTTP location of generated graphs.
+.It Fl t
+Test config and exit.
+.El
+.Sh FILES
+.Bl -tag -width Ds
+.It Pa /usr/local/etc/apinger.conf
+The default config file.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr apinger.conf 5
+.Sh AUTHORS
+.An Jacek Konieczny Aq Mt jajcus@jajcus.net
+.An Franco Fichtner Aq Mt franco@opnsense.org
