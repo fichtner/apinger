@@ -297,16 +297,17 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			}
 			break;
 		case 'p':
-			sprintf(ps, "%i", t->last_sent);
+			snprintf(ps, sizeof(ps), "%i", t->last_sent);
 			values[n] = ps;
 			break;
 		case 'P':
-			sprintf(pr, "%i", t->received);
+			snprintf(pr, sizeof(pr), "%i", t->received);
 			values[n] = pr;
 			break;
 		case 'l':
 			if (AVG_LOSS_KNOWN(t)) {
-				sprintf(al, "%0.1f%%", AVG_LOSS(t));
+				snprintf(al, sizeof(al), "%0.1f%%",
+				    AVG_LOSS(t));
 				values[n] = al;
 			} else {
 				values[n] = "n/a";
@@ -314,7 +315,8 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			break;
 		case 'd':
 			if (AVG_DELAY_KNOWN(t)) {
-				sprintf(ad, "%0.3fms", AVG_DELAY(t));
+				snprintf(ad, sizeof(ad), "%0.3fms",
+				    AVG_DELAY(t));
 				values[n] = ad;
 			} else {
 				values[n] = "n/a";
