@@ -144,6 +144,4 @@ extern volatile int reload_request;
 extern volatile int status_request;
 extern volatile int sigpipe_received;
 
-#define NEW(type,size) ((type *)calloc(1,sizeof(type)*size))
-
 #endif
