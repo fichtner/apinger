@@ -122,8 +122,8 @@ struct target_cfg *cur_target;
 
 config:	/* */
 	| DEBUG boolean { cur_config.debug=$2; }
-	| USER string { cur_config.user=$2; }
-	| GROUP string { cur_config.group=$2; }
+	| USER string { /* backwards-compat */ }
+	| GROUP string { /* backwards-compat */ }
 	| MAILER string { cur_config.mailer=$2; }
 	| TIMESTAMP_FORMAT string { cur_config.timestamp_format=$2; }
 	| PID_FILE string { cur_config.pid_file=$2; }

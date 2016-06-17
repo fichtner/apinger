@@ -165,6 +165,7 @@ alarm_on(struct target *t, struct alarm_cfg *a)
 
 	al = malloc(sizeof(*al));
 	assert(al);
+	memset(al, 0, sizeof(*al));
 	al->next = t->active_alarms;
 	al->num_repeats = 0;
 	al->alarm = a;
@@ -481,8 +482,9 @@ struct delayed_report *dr,*tdr;
 			if (strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
 		}
 		if (tdr!=NULL && strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
-		dr= malloc(sizeof(*dr));
+		dr = malloc(sizeof(*dr));
 		assert(dr);
+		memset(dr, 0, sizeof(*dr));
 		dr->t=t;
 		dr->a=a;
 		dr->on=on;
@@ -810,11 +812,6 @@ configure_targets(struct config *cfg)
 #endif
 			}
 			memset(&srcaddr, 0, sizeof(srcaddr));
-			/* XXX only for sample config run on loopback */
-			if (!tc->srcip) {
-				debug("No source IP, trying target");
-				tc->srcip = strdup(tc->name);
-			}
 			debug("Converting srcip %s", tc->srcip);
 			r = inet_pton(AF_INET, tc->srcip,
 			    &srcaddr.addr4.sin_addr);
@@ -849,6 +846,7 @@ configure_targets(struct config *cfg)
 
 			t = malloc(sizeof(*t));
 			assert(t);
+			memset(t, 0, sizeof(*t));
 			t->name = strdup(tc->name);
 			t->description = strdup(tc->description);
 			debug("Creating new target %s (%s)", t->name,
@@ -858,7 +856,6 @@ configure_targets(struct config *cfg)
 			t->next = targets;
 			t->config = tc;
 			targets = t;
-
 			switch (t->addr.addr.sa_family) {
 			case AF_INET:
 				make_icmp_socket(t);
@@ -883,6 +880,7 @@ configure_targets(struct config *cfg)
 		} else {
 			t->queue = malloc(l);
 			assert(t->queue);
+			memset(t->queue, 0, l);
 		}
 
 		/* t->recently_lost=tc->avg_loss_samples; */
@@ -951,16 +949,14 @@ reload_config(void)
 	}
 }
 
-void write_status(void){
-FILE *f;
-struct target *t;
-struct active_alarm_list *al;
-struct alarm_cfg *a;
-time_t tm;
-#if 0
-int i,qp,really_lost;
-char *buf1,*buf2;
-#endif
+void
+write_status(void)
+{
+	struct active_alarm_list *al;
+	struct alarm_cfg *a;
+	struct target *t;
+	time_t tm;
+	FILE *f;
 
 	if (config->status_file==NULL) return;
 

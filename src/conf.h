@@ -92,8 +92,6 @@ struct config {
 	struct target_cfg target_defaults;
 	int rrd_interval;
 	int debug;
-	char *user;
-	char *group;
 	char *mailer;
 	char *pid_file;
 	char *status_file;
