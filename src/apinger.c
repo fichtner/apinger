@@ -213,7 +213,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 {
 	char ps[16], pr[16], al[16], ad[16], ts[100];
 	int nmacros = 0;
-	int i, sl, l, n;
+	size_t i, sl, l, n;
 	char **values;
 	time_t tim;
 	char *p;
