@@ -240,7 +240,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 	}
 
 	values = calloc(nmacros + 1, sizeof(*values));
-	assert(values);
+	assert(values != NULL);
 
 	l = sl = strlen(string);
 	n = 0;
