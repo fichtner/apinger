@@ -204,7 +204,7 @@ alarm_off(struct target *t, struct alarm_cfg *a)
 	logit("Alarm '%s' not found in '%s'", a->name, t->name);
 }
 
-static char *macros_buf = NULL;
+/*@null@*/ static char *macros_buf = NULL;
 static int macros_buf_l = 0;
 
 const char *
