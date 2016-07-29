@@ -326,7 +326,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			break;
 		case 's':
 			tim = time(NULL);
-			strftime(ts, sizeof(ts), config->timestamp_format,
+			(void) strftime(ts, sizeof(ts), config->timestamp_format,
 			    localtime(&tim));
 			values[n] = ts;
 			break;
