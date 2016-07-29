@@ -722,7 +722,7 @@ configure_targets(struct config *cfg)
 				toggle_alarm(t, aal->alarm, -1);
 			}
 			if (t->socket) {
-				close(t->socket);
+				(void) close(t->socket);
 			}
 
 			if (delayed_reports) {
