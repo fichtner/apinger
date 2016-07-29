@@ -219,7 +219,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 	time_t tim;
 	char *p;
 
-	if (!string || strlen(string)) {
+	if (!string || 0 == strlen(string)) {
 		return "";
 	}
 
