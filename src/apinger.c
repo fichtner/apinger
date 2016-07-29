@@ -88,8 +88,9 @@ apinger_gettime(struct timeval *tp)
 		debug("System time fetch failed");
 	}
 
-	tp->tv_usec = now.tv_nsec / 1000;
-	tp->tv_sec = now.tv_sec;
+	assert(tp != NULL);
+	(*tp).tv_usec = now.tv_nsec / 1000;
+	(*tp).tv_sec = now.tv_sec;
 }
 
 #ifndef timerisset
@@ -164,13 +165,13 @@ alarm_on(struct target *t, struct alarm_cfg *a)
 	apinger_gettime(&cur_time);
 
 	al = malloc(sizeof(*al));
-	assert(al);
+	assert(al != NULL);
 	memset(al, 0, sizeof(*al));
 	al->next = t->active_alarms;
 	al->num_repeats = 0;
 	al->alarm = a;
 
-	if (a->repeat_interval) {
+	if (0 != a->repeat_interval) {
 		tv.tv_sec = a->repeat_interval / 1000;
 		tv.tv_usec = (a->repeat_interval % 1000) * 1000;
 		timeradd(&cur_time, &tv, &al->next_repeat);
@@ -205,20 +206,20 @@ alarm_off(struct target *t, struct alarm_cfg *a)
 }
 
 static char *macros_buf = NULL;
-static int macros_buf_l = 0;
+static size_t macros_buf_l = 0;
 
 const char *
 subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
     int on)
 {
 	char ps[16], pr[16], al[16], ad[16], ts[100];
-	int nmacros = 0;
-	int i, sl, l, n;
+	size_t nmacros = 0;
+	size_t i, sl, l, n;
 	char **values;
 	time_t tim;
 	char *p;
 
-	if (!string || strlen(string)) {
+	if (!string || 0 == strlen(string)) {
 		return "";
 	}
 
@@ -234,12 +235,12 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 		}
 	}
 
-	if (!nmacros) {
+	if (0 != nmacros) {
 		return string;
 	}
 
 	values = calloc(nmacros + 1, sizeof(*values));
-	assert(values);
+	assert(values != NULL);
 
 	l = sl = strlen(string);
 	n = 0;
@@ -298,16 +299,16 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			}
 			break;
 		case 'p':
-			snprintf(ps, sizeof(ps), "%i", t->last_sent);
+			(void) snprintf(ps, sizeof(ps), "%i", t->last_sent);
 			values[n] = ps;
 			break;
 		case 'P':
-			snprintf(pr, sizeof(pr), "%i", t->received);
+			(void) snprintf(pr, sizeof(pr), "%i", t->received);
 			values[n] = pr;
 			break;
 		case 'l':
 			if (AVG_LOSS_KNOWN(t)) {
-				snprintf(al, sizeof(al), "%0.1f%%",
+				(void) snprintf(al, sizeof(al), "%0.1f%%",
 				    AVG_LOSS(t));
 				values[n] = al;
 			} else {
@@ -316,7 +317,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			break;
 		case 'd':
 			if (AVG_DELAY_KNOWN(t)) {
-				snprintf(ad, sizeof(ad), "%0.3fms",
+				(void) snprintf(ad, sizeof(ad), "%0.3fms",
 				    AVG_DELAY(t));
 				values[n] = ad;
 			} else {
@@ -325,7 +326,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			break;
 		case 's':
 			tim = time(NULL);
-			strftime(ts, sizeof(ts), config->timestamp_format,
+			(void) strftime(ts, sizeof(ts), config->timestamp_format,
 			    localtime(&tim));
 			values[n] = ts;
 			break;
@@ -347,10 +348,10 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 		/* as we don't care about the contents we use free/malloc */
 		free(macros_buf);
 		macros_buf = malloc(l);
-		assert(macros_buf);
 		macros_buf_l = l;
 	}
 
+	assert(macros_buf != NULL);
 	memset(macros_buf, 0, macros_buf_l);
 
 	p = macros_buf;
@@ -455,6 +456,24 @@ void make_delayed_reports(void)
 	make_reports(wdr->t, wdr->a, wdr->on);
 
 	delayed_reports = wdr->next;
+
+	free(wdr->a->mailto);
+	free(wdr->a->mailfrom);
+	free(wdr->a->mailenvfrom);
+	free(wdr->a->mailsubject);
+	free(wdr->a->command_on);
+	free(wdr->a->command_off);
+	free(wdr->a->pipe_on);
+	free(wdr->a->pipe_off);
+	free(wdr->a->next);
+	free(wdr->a);
+	free(wdr->t->name);
+	free(wdr->t->description);
+	free(wdr->t->queue);
+	free(wdr->t->rbuf);
+	free(wdr->t->config);
+	free(wdr->t->next);
+	free(wdr->t);
 	free(wdr);
 }
 
@@ -483,7 +502,7 @@ struct delayed_report *dr,*tdr;
 		}
 		if (tdr!=NULL && strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
 		dr = malloc(sizeof(*dr));
-		assert(dr);
+		assert(NULL != dr);
 		memset(dr, 0, sizeof(*dr));
 		dr->t=t;
 		dr->a=a;
@@ -596,7 +615,7 @@ struct alarm_cfg *a;
 	t->last_received_tv=*time_recv;
 	timersub(time_recv,&ti->timestamp,&tv);
 	delay=tv.tv_sec*1000.0+((double)tv.tv_usec)/1000.0 - timedelta;
-	//if (delay < 0) delay = 0;
+	/* if (delay < 0) delay = 0; */
 	tmp=t->rbuf[t->received%t->config->avg_delay_samples];
 	t->rbuf[t->received%t->config->avg_delay_samples]=delay;
 	t->delay_sum+=delay-tmp;
@@ -703,7 +722,7 @@ configure_targets(struct config *cfg)
 				toggle_alarm(t, aal->alarm, -1);
 			}
 			if (t->socket) {
-				close(t->socket);
+				(void) close(t->socket);
 			}
 
 			if (delayed_reports) {
@@ -845,7 +864,7 @@ configure_targets(struct config *cfg)
 			}
 
 			t = malloc(sizeof(*t));
-			assert(t);
+			assert(NULL != t);
 			memset(t, 0, sizeof(*t));
 			t->name = strdup(tc->name);
 			t->description = strdup(tc->description);
@@ -879,7 +898,7 @@ configure_targets(struct config *cfg)
 			}
 		} else {
 			t->queue = malloc(l);
-			assert(t->queue);
+			assert(t->queue != NULL);
 			memset(t->queue, 0, l);
 		}
 
@@ -899,7 +918,7 @@ configure_targets(struct config *cfg)
 			}
 		} else {
 			t->rbuf = calloc(l, sizeof(*t->rbuf));
-			assert(t->rbuf);
+			assert(t->rbuf != NULL);
 		}
 		t->config = tc;
 	}
