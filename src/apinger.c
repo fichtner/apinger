@@ -456,6 +456,24 @@ void make_delayed_reports(void)
 	make_reports(wdr->t, wdr->a, wdr->on);
 
 	delayed_reports = wdr->next;
+
+	free(wdr->a->mailto);
+	free(wdr->a->mailfrom);
+	free(wdr->a->mailenvfrom);
+	free(wdr->a->mailsubject);
+	free(wdr->a->command_on);
+	free(wdr->a->command_off);
+	free(wdr->a->pipe_on);
+	free(wdr->a->pipe_off);
+	free(wdr->a->next);
+	free(wdr->a);
+	free(wdr->t->name);
+	free(wdr->t->description);
+	free(wdr->t->queue);
+	free(wdr->t->rbuf);
+	free(wdr->t->config);
+	free(wdr->t->next);
+	free(wdr->t);
 	free(wdr);
 }
 
