@@ -171,7 +171,7 @@ alarm_on(struct target *t, struct alarm_cfg *a)
 	al->num_repeats = 0;
 	al->alarm = a;
 
-	if (a->repeat_interval) {
+	if (0 != a->repeat_interval) {
 		tv.tv_sec = a->repeat_interval / 1000;
 		tv.tv_usec = (a->repeat_interval % 1000) * 1000;
 		timeradd(&cur_time, &tv, &al->next_repeat);
