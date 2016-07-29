@@ -206,7 +206,7 @@ alarm_off(struct target *t, struct alarm_cfg *a)
 }
 
 /*@null@*/ static char *macros_buf = NULL;
-static int macros_buf_l = 0;
+static size_t macros_buf_l = 0;
 
 const char *
 subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
