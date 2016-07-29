@@ -164,7 +164,7 @@ alarm_on(struct target *t, struct alarm_cfg *a)
 	apinger_gettime(&cur_time);
 
 	al = malloc(sizeof(*al));
-	assert(al);
+	assert(al != NULL);
 	memset(al, 0, sizeof(*al));
 	al->next = t->active_alarms;
 	al->num_repeats = 0;
