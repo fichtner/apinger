@@ -15,6 +15,16 @@ Alarm Pinger is quite configurable via $sysconfdir/apinger.conf file. The
 configuration file contains definitions for alarms, targets and various
 parameters. See the apinger.conf in the src/ directory for description.
 
+Dependencies
+------------
+* autotools (automake, autoconf, autoheader)
+* (GNU) awk
+* bison
+* flex
+* C compiler (gcc / clang)
+* (GNU) make
+* rrdtool
+
 Copying and Warranty
 --------------------
 This program is free software; you can redistribute it and/or modify it under
