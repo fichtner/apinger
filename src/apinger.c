@@ -299,16 +299,16 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			}
 			break;
 		case 'p':
-			snprintf(ps, sizeof(ps), "%i", t->last_sent);
+			(void) snprintf(ps, sizeof(ps), "%i", t->last_sent);
 			values[n] = ps;
 			break;
 		case 'P':
-			snprintf(pr, sizeof(pr), "%i", t->received);
+			(void) snprintf(pr, sizeof(pr), "%i", t->received);
 			values[n] = pr;
 			break;
 		case 'l':
 			if (AVG_LOSS_KNOWN(t)) {
-				snprintf(al, sizeof(al), "%0.1f%%",
+				(void) snprintf(al, sizeof(al), "%0.1f%%",
 				    AVG_LOSS(t));
 				values[n] = al;
 			} else {
@@ -317,7 +317,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 			break;
 		case 'd':
 			if (AVG_DELAY_KNOWN(t)) {
-				snprintf(ad, sizeof(ad), "%0.3fms",
+				(void) snprintf(ad, sizeof(ad), "%0.3fms",
 				    AVG_DELAY(t));
 				values[n] = ad;
 			} else {
