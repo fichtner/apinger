@@ -502,7 +502,7 @@ struct delayed_report *dr,*tdr;
 		}
 		if (tdr!=NULL && strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
 		dr = malloc(sizeof(*dr));
-		assert(dr);
+		assert(NULL != dr);
 		memset(dr, 0, sizeof(*dr));
 		dr->t=t;
 		dr->a=a;
@@ -864,7 +864,7 @@ configure_targets(struct config *cfg)
 			}
 
 			t = malloc(sizeof(*t));
-			assert(t);
+			assert(NULL != t);
 			memset(t, 0, sizeof(*t));
 			t->name = strdup(tc->name);
 			t->description = strdup(tc->description);
@@ -898,7 +898,7 @@ configure_targets(struct config *cfg)
 			}
 		} else {
 			t->queue = malloc(l);
-			assert(t->queue);
+			assert(t->queue != NULL);
 			memset(t->queue, 0, l);
 		}
 
@@ -918,7 +918,7 @@ configure_targets(struct config *cfg)
 			}
 		} else {
 			t->rbuf = calloc(l, sizeof(*t->rbuf));
-			assert(t->rbuf);
+			assert(t->rbuf != NULL);
 		}
 		t->config = tc;
 	}
