@@ -235,7 +235,7 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 		}
 	}
 
-	if (!nmacros) {
+	if (0 != nmacros) {
 		return string;
 	}
 
