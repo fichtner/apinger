@@ -596,7 +596,7 @@ struct alarm_cfg *a;
 	t->last_received_tv=*time_recv;
 	timersub(time_recv,&ti->timestamp,&tv);
 	delay=tv.tv_sec*1000.0+((double)tv.tv_usec)/1000.0 - timedelta;
-	//if (delay < 0) delay = 0;
+	/* if (delay < 0) delay = 0; */
 	tmp=t->rbuf[t->received%t->config->avg_delay_samples];
 	t->rbuf[t->received%t->config->avg_delay_samples]=delay;
 	t->delay_sum+=delay-tmp;
