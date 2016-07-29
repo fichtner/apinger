@@ -348,10 +348,10 @@ subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
 		/* as we don't care about the contents we use free/malloc */
 		free(macros_buf);
 		macros_buf = malloc(l);
-		assert(macros_buf);
 		macros_buf_l = l;
 	}
 
+	assert(macros_buf != NULL);
 	memset(macros_buf, 0, macros_buf_l);
 
 	p = macros_buf;
