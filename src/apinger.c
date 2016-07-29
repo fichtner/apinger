@@ -88,6 +88,7 @@ apinger_gettime(struct timeval *tp)
 		debug("System time fetch failed");
 	}
 
+	assert(tp != NULL);
 	(*tp).tv_usec = now.tv_nsec / 1000;
 	(*tp).tv_sec = now.tv_sec;
 }
