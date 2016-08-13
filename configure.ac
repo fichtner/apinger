@@ -22,7 +22,7 @@ AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([arpa/inet.h errno.h malloc.h \
 		stddef.h stdlib.h string.h sys/socket.h \
 		sys/time.h syslog.h unistd.h time.h \
-		assert.h sys/poll.h signal.h stdarg.h\
+		assert.h sys/poll.h signal.h pwd.h grp.h stdarg.h\
 		limits.h sys/wait.h sched.h sys/ioctl.h sys/uio.h])
 AC_HEADER_TIME
 

@@ -30,6 +30,12 @@
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
 #endif
+#ifdef HAVE_PWD_H
+# include <pwd.h>
+#endif
+#ifdef HAVE_GRP_H
+# include <grp.h>
+#endif
 #ifdef HAVE_SYS_WAIT_H
 # include <sys/wait.h>
 #endif
@@ -47,6 +53,7 @@ struct config default_config = {
 	.timestamp_format = "%b %d %H:%M:%S",
 	.pid_file = "/var/run/apinger.pid",
 	.mailer = "/usr/lib/sendmail -t",
+	.user = "nobody",
 	.alarm_defaults = {
 		.mailsubject = "%r: %T(%t) *** %a ***",
 		.mailfrom = "nobody",
@@ -135,6 +142,8 @@ main(int argc, char **argv)
 	int stay_foreground = 0;
 	char *graph_dir = NULL;
 	int config_test = 0;
+	struct passwd *pw;
+	struct group *gr;
 	int do_debug = 0;
 	FILE *pidfile;
 	pid_t pid;
@@ -195,6 +204,21 @@ main(int argc, char **argv)
 		}
 	}
 
+	pw=getpwnam(config->user);
+	if (!pw) {
+		debug("getpwnam(\"%s\") failed.",config->user);
+		return 1;
+	}
+	if (config->group){
+		gr=getgrnam(config->group);
+		if (!gr) {
+			debug("getgrnam(\"%s\") failed.",config->group);
+			return 1;
+		}
+	}
+	else gr=NULL;
+
+
 	if (!stay_foreground){
 		pid=fork();
 		if (pid<0){
@@ -204,11 +228,12 @@ main(int argc, char **argv)
 		if (pid>0){ /* parent */
 			pidfile=fopen(config->pid_file,"w");
 			if (!pidfile){
-				fprintf(stderr,"Couldn't open pid file for writing. ");
+				fprintf(stderr,"Couldn't open pid file for writting.");
 				perror(config->pid_file);
 				return 1;
 			}
 			fprintf(pidfile,"%i\n",pid);
+			fchown(fileno(pidfile),pw->pw_uid,gr?gr->gr_gid:pw->pw_gid);
 			fclose(pidfile);
 			free_config();
 			exit(0);
@@ -218,6 +243,19 @@ main(int argc, char **argv)
 			close(i);
 		}
 		setsid();
+	}
+
+	if (initgroups(pw->pw_name,pw->pw_gid)){
+		myperror("initgroups");
+		return 1;
+	}
+	if (setgid(pw->pw_gid)){
+		myperror("setgid");
+		return 1;
+	}
+	if (setuid(pw->pw_uid)){
+		myperror("setuid");
+		return 1;
 	}
 
 	ident=getpid() & 0xFFFF;

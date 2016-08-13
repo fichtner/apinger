@@ -138,239 +138,190 @@ struct delayed_report {
 	struct delayed_report *next;
 };
 
-struct delayed_report *delayed_reports = NULL;
+struct delayed_report *delayed_reports=NULL;
+
 struct timeval operation_started;
 
-int
-is_alarm_on(struct target *t, struct alarm_cfg *a)
-{
-	struct active_alarm_list *al;
 
-	for (al = t->active_alarms; al; al = al->next) {
-		if (al->alarm == a) {
+int is_alarm_on(struct target *t,struct alarm_cfg *a){
+struct active_alarm_list *al;
+
+	for(al=t->active_alarms;al;al=al->next)
+		if (al->alarm==a)
 			return 1;
-		}
-	}
-
 	return 0;
 }
 
-void
-alarm_on(struct target *t, struct alarm_cfg *a)
-{
-	struct active_alarm_list *al;
-	struct timeval cur_time, tv;
+void alarm_on(struct target *t,struct alarm_cfg *a){
+struct active_alarm_list *al;
+struct timeval cur_time,tv;
 
 	apinger_gettime(&cur_time);
-
-	al = malloc(sizeof(*al));
-	assert(al);
-	memset(al, 0, sizeof(*al));
-	al->next = t->active_alarms;
-	al->num_repeats = 0;
-	al->alarm = a;
-
-	if (a->repeat_interval) {
-		tv.tv_sec = a->repeat_interval / 1000;
-		tv.tv_usec = (a->repeat_interval % 1000) * 1000;
-		timeradd(&cur_time, &tv, &al->next_repeat);
+	al=NEW(struct active_alarm_list,1);
+	al->next=t->active_alarms;
+	al->alarm=a;
+	al->num_repeats=0;
+	if (a->repeat_interval){
+		tv.tv_sec=a->repeat_interval/1000;
+		tv.tv_usec=(a->repeat_interval%1000)*1000;
+		timeradd(&cur_time,&tv,&al->next_repeat);
 	}
-
-	t->active_alarms = al;
+	t->active_alarms=al;
 }
 
-void
-alarm_off(struct target *t, struct alarm_cfg *a)
-{
-	struct active_alarm_list *al, *pa, *na;
+void alarm_off(struct target *t,struct alarm_cfg *a){
+struct active_alarm_list *al,*pa,*na;
 
-	pa = NULL;
-
-	for (al = t->active_alarms; al; al = na) {
-		na = al->next;
-		if (al->alarm == a) {
-			if (pa) {
-				pa->next = na;
-			} else {
-				t->active_alarms = na;
-			}
+	pa=NULL;
+	for(al=t->active_alarms;al;al=na){
+		na=al->next;
+		if (al->alarm==a){
+			if (pa!=NULL)
+				pa->next=na;
+			else
+				t->active_alarms=na;
 			free(al);
 			return;
-		} else {
-			pa = al;
 		}
+		else pa=al;
 	}
-
-	logit("Alarm '%s' not found in '%s'", a->name, t->name);
+	logit("Alarm '%s' not found in '%s'",a->name,t->name);
+	return;
 }
 
-static char *macros_buf = NULL;
-static int macros_buf_l = 0;
+static char *macros_buf=NULL;
+static int macros_buf_l=0;
+const char * subst_macros(const char *string,struct target *t,struct alarm_cfg *a,int on){
+char *p;
+int nmacros=0;
+int i,sl,l,n;
+char **values;
+char ps[16],pr[16],al[16],ad[16],ts[100];
+time_t tim;
 
-const char *
-subst_macros(const char *string, struct target *t, struct alarm_cfg *a,
-    int on)
-{
-	char ps[16], pr[16], al[16], ad[16], ts[100];
-	int nmacros = 0;
-	int i, sl, l, n;
-	char **values;
-	time_t tim;
-	char *p;
-
-	if (!string || strlen(string)) {
-		return "";
-	}
-
-	for (i = 0; string[i] != '\000'; i++) {
-		if (string[i] != '%') {
-			continue;
-		}
+	if (string==NULL || string[0]=='\000') return "";
+	for(i=0;string[i]!='\000';i++){
+		if (string[i]!='%') continue;
 		nmacros++;
-		/* weird way of skipping %% woes: */
 		i++;
-		if (string[i]=='\000') {
-			break;
-		}
+		if (string[i]=='\000') break;
 	}
-
-	if (!nmacros) {
-		return string;
-	}
-
-	values = calloc(nmacros + 1, sizeof(*values));
-	assert(values);
-
-	l = sl = strlen(string);
-	n = 0;
-
-	for (i = 0; i < sl; i++) {
-		if (string[i] != '%') {
-			continue;
-		}
+	if (nmacros==0) return string;
+	values=NEW(char *,(nmacros+1));
+	assert(values!=NULL);
+	l=sl=strlen(string);
+	n=0;
+	for(i=0;i<sl;i++){
+		if (string[i]!='%') continue;
 		i++;
-
-		switch (string[i]) {
+		switch(string[i]){
 		case 't':
-			values[n] = t->name;
+			values[n]=t->name;
 			break;
 		case 'T':
-			values[n] = t->description;
+			values[n]=t->description;
 			break;
 		case 'a':
-			if (a) {
-				values[n] = a->name;
-			} else {
-				values[n]= "?";
-			}
+			if (a)
+				values[n]=a->name;
+			else
+				values[n]="?";
 			break;
 		case 'A':
-			if (a) {
-				switch (a->type) {
+			if (a)
+				switch(a->type){
 				case AL_DOWN:
-					values[n] = "down";
+					values[n]="down";
 					break;
 				case AL_LOSS:
-					values[n] = "loss";
+					values[n]="loss";
 					break;
 				case AL_DELAY:
-					values[n] = "delay";
+					values[n]="delay";
 					break;
 				default:
-					values[n] = "unknown";
+					values[n]="unknown";
 					break;
 				}
-			} else {
-				values[n] = "?";
-			}
+			else
+				values[n]="?";
 			break;
 		case 'r':
-			switch (on) {
+			switch(on){
 			case -1:
-				values[n] = "alarm canceled (config reload)";
+				values[n]="alarm canceled (config reload)";
 				break;
 			case 0:
-				values[n] = "alarm canceled";
+				values[n]="alarm canceled";
 				break;
 			default:
-				values[n] = "ALARM";
+				values[n]="ALARM";
 				break;
 			}
 			break;
 		case 'p':
-			snprintf(ps, sizeof(ps), "%i", t->last_sent);
-			values[n] = ps;
+			sprintf(ps,"%i",t->last_sent);
+			values[n]=ps;
 			break;
 		case 'P':
-			snprintf(pr, sizeof(pr), "%i", t->received);
-			values[n] = pr;
+			sprintf(pr,"%i",t->received);
+			values[n]=pr;
 			break;
 		case 'l':
-			if (AVG_LOSS_KNOWN(t)) {
-				snprintf(al, sizeof(al), "%0.1f%%",
-				    AVG_LOSS(t));
-				values[n] = al;
-			} else {
-				values[n] = "n/a";
+			if (AVG_LOSS_KNOWN(t)){
+				sprintf(al,"%0.1f%%",AVG_LOSS(t));
+				values[n]=al;
 			}
+			else values[n]="n/a";
 			break;
 		case 'd':
-			if (AVG_DELAY_KNOWN(t)) {
-				snprintf(ad, sizeof(ad), "%0.3fms",
-				    AVG_DELAY(t));
-				values[n] = ad;
-			} else {
-				values[n] = "n/a";
+			if (AVG_DELAY_KNOWN(t)){
+				sprintf(ad,"%0.3fms",AVG_DELAY(t));
+				values[n]=ad;
 			}
+			else values[n]="n/a";
 			break;
 		case 's':
-			tim = time(NULL);
-			strftime(ts, sizeof(ts), config->timestamp_format,
-			    localtime(&tim));
-			values[n] = ts;
+			tim=time(NULL);
+			strftime(ts,100,config->timestamp_format,localtime(&tim));
+			values[n]=ts;
 			break;
 		case '%':
-			values[n] = "%";
+			values[n]="%";
 			break;
 		default:
-			values[n] = "";
+			values[n]="";
 			break;
 		}
-		l += strlen(values[n]) + 1;
+		l+=strlen(values[n])+1;
 		n++;
 	}
-
-	values[n] = NULL;
-	l += 2;
-
-	if (macros_buf_l < l) {
-		/* as we don't care about the contents we use free/malloc */
-		free(macros_buf);
-		macros_buf = malloc(l);
-		assert(macros_buf);
-		macros_buf_l = l;
+	values[n]=NULL;
+	l+=2;
+	if (macros_buf == NULL){
+		macros_buf=NEW(char,l);
+		macros_buf_l=l;
+	}else if (macros_buf_l != l){
+		macros_buf=(char *)realloc(macros_buf,l);
+		macros_buf_l=l;
 	}
-
+	assert(macros_buf!=NULL);
 	memset(macros_buf, 0, macros_buf_l);
-
-	p = macros_buf;
-	n = 0;
-
-	for (i = 0; i < sl; i++) {
-		if (string[i] != '%') {
-			*p++ = string[i];
+	p=macros_buf;
+	n=0;
+	for(i=0;i<sl;i++){
+		if (string[i]!='%'){
+			*p++=string[i];
 			continue;
 		}
-		strcpy(p, values[n]);
-		p += strlen(values[n]);
+		strcpy(p,values[n]);
+		p+=strlen(values[n]);
 		n++;
 		i++;
 	}
-
 	free(values);
 	*p='\000';
-
-	return (macros_buf);
+	return macros_buf;
 }
 
 void
@@ -482,9 +433,8 @@ struct delayed_report *dr,*tdr;
 			if (strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
 		}
 		if (tdr!=NULL && strcmp(tdr->t->name,t->name)==0 && tdr->a==a && tdr->on==on) return;
-		dr = malloc(sizeof(*dr));
-		assert(dr);
-		memset(dr, 0, sizeof(*dr));
+		dr=NEW(struct delayed_report,1);
+		assert(dr!=NULL);
 		dr->t=t;
 		dr->a=a;
 		dr->on=on;
@@ -812,6 +762,11 @@ configure_targets(struct config *cfg)
 #endif
 			}
 			memset(&srcaddr, 0, sizeof(srcaddr));
+			/* XXX only for sample config run on loopback */
+			if (!tc->srcip) {
+				debug("No source IP, trying target");
+				tc->srcip = strdup(tc->name);
+			}
 			debug("Converting srcip %s", tc->srcip);
 			r = inet_pton(AF_INET, tc->srcip,
 			    &srcaddr.addr4.sin_addr);
@@ -844,9 +799,7 @@ configure_targets(struct config *cfg)
 #endif
 			}
 
-			t = malloc(sizeof(*t));
-			assert(t);
-			memset(t, 0, sizeof(*t));
+			t = NEW(struct target, 1);
 			t->name = strdup(tc->name);
 			t->description = strdup(tc->description);
 			debug("Creating new target %s (%s)", t->name,
@@ -856,6 +809,7 @@ configure_targets(struct config *cfg)
 			t->next = targets;
 			t->config = tc;
 			targets = t;
+
 			switch (t->addr.addr.sa_family) {
 			case AF_INET:
 				make_icmp_socket(t);
@@ -878,9 +832,8 @@ configure_targets(struct config *cfg)
 				assert(t->queue != NULL);
 			}
 		} else {
-			t->queue = malloc(l);
-			assert(t->queue);
-			memset(t->queue, 0, l);
+			t->queue=NEW(char,l);
+			assert(t->queue!=NULL);
 		}
 
 		/* t->recently_lost=tc->avg_loss_samples; */
@@ -898,8 +851,8 @@ configure_targets(struct config *cfg)
 				assert(t->rbuf!= NULL);
 			}
 		} else {
-			t->rbuf = calloc(l, sizeof(*t->rbuf));
-			assert(t->rbuf);
+			t->rbuf = NEW(double, l);
+			assert(t->rbuf != NULL);
 		}
 		t->config = tc;
 	}
@@ -949,14 +902,16 @@ reload_config(void)
 	}
 }
 
-void
-write_status(void)
-{
-	struct active_alarm_list *al;
-	struct alarm_cfg *a;
-	struct target *t;
-	time_t tm;
-	FILE *f;
+void write_status(void){
+FILE *f;
+struct target *t;
+struct active_alarm_list *al;
+struct alarm_cfg *a;
+time_t tm;
+#if 0
+int i,qp,really_lost;
+char *buf1,*buf2;
+#endif
 
 	if (config->status_file==NULL) return;
 
@@ -982,9 +937,50 @@ write_status(void)
 				a=al->alarm;
 				fprintf(f,"%s",a->name);
 			}
-		} else {
-			fprintf(f, "none");
 		}
+		else fprintf(f,"none");
+
+#if 0
+		buf1=NEW(char,t->config->avg_loss_delay_samples+1);
+		buf2=NEW(char,t->config->avg_loss_samples+1);
+		i=t->last_sent%(t->config->avg_loss_delay_samples+t->config->avg_loss_samples);
+		for(i=0;i<t->config->avg_loss_delay_samples;i++){
+			if (i>=t->last_sent){
+				buf1[t->config->avg_loss_delay_samples-i-1]='-';
+				continue;
+			}
+			qp=(t->last_sent-i)%(t->config->avg_loss_delay_samples+
+							t->config->avg_loss_samples);
+			if (t->queue[qp])
+				buf1[t->config->avg_loss_delay_samples-i-1]='#';
+			else
+				buf1[t->config->avg_loss_delay_samples-i-1]='.';
+		}
+		buf1[i]=0;
+		really_lost=0;
+		for(i=0;i<t->config->avg_loss_samples;i++){
+			if (i>=t->last_sent-t->config->avg_loss_delay_samples){
+				buf2[t->config->avg_loss_samples-i-1]='-';
+				continue;
+			}
+			qp=(t->last_sent-i-t->config->avg_loss_delay_samples)
+				%(t->config->avg_loss_delay_samples+t->config->avg_loss_samples);
+			if (t->queue[qp])
+				buf2[t->config->avg_loss_samples-i-1]='#';
+			else{
+				buf2[t->config->avg_loss_samples-i-1]='.';
+				really_lost++;
+			}
+		}
+		buf2[i]=0;
+		if (t->recently_lost!=really_lost){
+			logit("Target \"%s\": Lost packet count mismatch (%i(recently_lost) != %i(really_lost))!",t->name,t->recently_lost,really_lost);
+			logit("Target \"%s\": Received packets buffer: %s %s\n",t->name,buf2,buf1);
+			//t->recently_lost = really_lost = 0;
+		}
+		free(buf1);
+		free(buf2);
+#endif
 
 		fprintf(f,"\n");
 	}

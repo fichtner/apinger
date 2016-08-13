@@ -268,8 +268,7 @@ rrd_print_cgi(const char *graph_dir, const char *graph_location)
 		}
 
 		if (num_esc > 0) {
-			ebuf = malloc(strlen(rrd_filename) + num_esc + 1);
-			memset(ebuf, 0, strlen(rrd_filename) + num_esc + 1);
+			ebuf = NEW(char, strlen(rrd_filename) + num_esc + 1);
 			p1 = ebuf;
 
 			for (p = rrd_filename; *p; p++) {

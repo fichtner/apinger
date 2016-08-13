@@ -15,6 +15,9 @@ Alarm Pinger is quite configurable via $sysconfdir/apinger.conf file. The
 configuration file contains definitions for alarms, targets and various
 parameters. See the apinger.conf in the src/ directory for description.
 
+apinger needs root privileges to start (to create raw sockets), but will drop
+them before sending or receiving any packets. 
+
 Dependencies
 ------------
 * autotools (automake, autoconf, autoheader)

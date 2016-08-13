@@ -225,10 +225,6 @@ load_config(const char *filename)
 		}
 
 		for (t = cur_config.targets; t; t = t->next) {
-			if (!t->srcip) {
-				/* XXX only for sample config run on loopback */
-				t->srcip = strdup(t->name);
-			}
 			if (!t->description) {
 				t->description = cur_config.target_defaults.description;
 			}
